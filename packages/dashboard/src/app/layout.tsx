@@ -16,10 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen flex bg-[#0a0a0f] text-[#f8f9fa] antialiased">
+      <body className="min-h-screen overflow-x-hidden bg-[#090907] text-[#f5f0e4] antialiased">
         <ToastProvider>
           <Sidebar />
-          <main className="flex-1 ml-72">{children}</main>
+          <main className="min-w-0 pt-[8.75rem] lg:ml-72 lg:pt-0">{children}</main>
         </ToastProvider>
       </body>
     </html>

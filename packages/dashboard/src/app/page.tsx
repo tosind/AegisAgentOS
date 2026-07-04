@@ -36,23 +36,24 @@ export default function DashboardPage() {
   const connectedSystems = data.connections.filter((conn) => conn.status === "connected").length;
 
   return (
-    <div className="min-h-screen px-8 py-7 space-y-6 max-w-[1720px]">
-      <header className="grid grid-cols-[1fr_auto] gap-6 items-start">
+    <div className="min-h-screen max-w-[1720px] space-y-5 px-4 py-5 sm:px-6 lg:space-y-6 lg:px-8 lg:py-7">
+      <header className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
-          <div className="flex items-center gap-3 text-xs text-[#8a8171] mb-3">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[#8a8171] sm:gap-3">
             <span className="badge badge-warning text-[10px] px-2 py-0.5">Aegis Alpha</span>
             <span>Hermes-grade operator surface</span>
-            <span className="text-[#332d20]">/</span>
-            <span>{data.source === "live" ? "Live stack" : "Demo telemetry"}</span>
+            <span className="hidden text-[#332d20] sm:inline">/</span>
+            <span className="basis-full sm:basis-auto">{data.source === "live" ? "Live stack" : "Demo telemetry"}</span>
           </div>
-          <h2 className="text-[2.15rem] leading-tight font-semibold text-[#f5f0e4]">
-            Enterprise agent command center
+          <h2 className="max-w-[20rem] text-3xl font-semibold leading-tight text-[#f5f0e4] sm:max-w-none sm:text-[2.15rem]">
+            <span className="block sm:inline">Enterprise agent</span>
+            <span className="block sm:inline"> command center</span>
           </h2>
-          <p className="text-[#c8bea9] text-sm mt-2 max-w-3xl">
+          <p className="mt-2 max-w-[19.5rem] break-words text-sm text-[#c8bea9] sm:max-w-3xl">
             Paperclip orchestration, local LLM routing, MCP connectors, and audit-first policy control in one cockpit.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               void refresh();
@@ -70,7 +71,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-4 gap-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           icon={UsersRound}
           label="Active Agents"
@@ -101,7 +102,7 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid grid-cols-[1.15fr_0.85fr] gap-5">
+      <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="card p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-[#332d20] flex items-center justify-between">
             <div>
@@ -114,7 +115,7 @@ export default function DashboardPage() {
           </div>
           <div className="divide-y divide-[#332d20]/70">
             {data.agents.map((agent, index) => (
-              <div key={agent.id} className="grid grid-cols-[auto_1fr_auto] gap-4 px-5 py-4 hover:bg-[#e3a21a]/[0.035] transition-colors">
+              <div key={agent.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-[#e3a21a]/[0.035] sm:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr_auto]">
                 <div className={`w-10 h-10 rounded-lg border flex items-center justify-center mono text-xs font-bold ${agent.status === "active" ? "border-[#3aa35c]/45 text-[#77d28d] bg-[#3aa35c]/10" : agent.status === "idle" ? "border-[#e3a21a]/45 text-[#f2c566] bg-[#e3a21a]/10" : "border-[#8a8171]/35 text-[#8a8171] bg-white/[0.02]"}`}>
                   A{index + 1}
                 </div>
@@ -133,7 +134,7 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-right text-xs">
+                <div className="grid grid-cols-3 gap-4 text-left text-xs sm:col-span-2 xl:col-span-1 xl:text-right">
                   <MiniReadout label="Today" value={`${agent.tasksToday}`} />
                   <MiniReadout label="Success" value={agent.successRate} good />
                   <MiniReadout label="Skills" value={`${agent.skillsLearned}`} />
@@ -169,7 +170,7 @@ export default function DashboardPage() {
               <Cpu size={18} className="text-[#4fbcba]" />
               <h3 className="font-semibold text-lg">Model Routing</h3>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <BackendCell label="vLLM" online={!!data.backends.vllm} />
               <BackendCell label="Ollama" online={!!data.backends.ollama} />
               <BackendCell label="OpenAI" online={!!data.backends.openai} external />
@@ -182,7 +183,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-[0.7fr_1.3fr] gap-5">
+      <section className="grid gap-5 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Database size={18} className="text-[#e3a21a]" />
@@ -205,7 +206,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#332d20] flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 border-b border-[#332d20] px-5 py-4">
             <div className="flex items-center gap-2">
               <Activity size={18} className="text-[#4fbcba]" />
               <h3 className="font-semibold text-lg">Audit Stream</h3>
@@ -214,7 +215,7 @@ export default function DashboardPage() {
           </div>
           <div className="divide-y divide-[#332d20]/70">
             {data.auditLogs.slice(0, 7).map((event) => (
-              <div key={event.id} className="grid grid-cols-[5rem_1fr_auto] gap-4 px-5 py-3 items-center hover:bg-white/[0.018] transition-colors">
+              <div key={event.id} className="grid gap-2 px-5 py-3 transition-colors hover:bg-white/[0.018] sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:gap-4">
                 <span className="mono text-xs text-[#8a8171]">
                   {new Date(event.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
@@ -231,7 +232,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-3 gap-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <QuickAction title="Hire an Agent" description="Create a governed worker and bind it to Paperclip." icon={UsersRound} href="/agents?action=hire" />
         <QuickAction title="Connect Systems" description="Add MCP-backed data, code, and communication tools." icon={Network} href="/integrations?action=connect" />
         <QuickAction title="Tune Policy" description="Review local routing, approvals, and PII controls." icon={ShieldCheck} href="/policies" />

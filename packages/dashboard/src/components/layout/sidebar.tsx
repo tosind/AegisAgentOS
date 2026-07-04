@@ -39,7 +39,48 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-[#0c0b08]/95 border-r border-[#332d20] flex flex-col fixed h-full z-40 transition-all backdrop-blur">
+    <>
+    <div className="fixed inset-x-0 top-0 z-50 max-w-full overflow-hidden border-b border-[#332d20] bg-[#0c0b08]/96 backdrop-blur lg:hidden">
+      <div className="px-4 py-3">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e3a21a] text-xs font-black text-[#160f02] shadow-[0_0_28px_rgba(227,162,26,0.18)]">
+            AG
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-bold">
+              <span className="text-[#e3a21a]">Aegis</span> Agent OS
+            </h1>
+            <p className="truncate text-[11px] font-medium text-[#8a8171]">
+              Enterprise command center
+            </p>
+          </div>
+        </Link>
+      </div>
+      <nav className="flex max-w-full gap-2 overflow-x-auto px-3 pb-3">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                isActive
+                  ? "border-[#e3a21a]/30 bg-[#e3a21a]/12 text-[#f2c566]"
+                  : "border-[#332d20] bg-[#14120d]/72 text-[#c8bea9]"
+              }`}
+            >
+              <Icon size={15} className={isActive ? "text-[#e3a21a]" : "text-[#8a8171]"} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+
+    <aside className="fixed z-40 hidden h-full w-72 flex-col border-r border-[#332d20] bg-[#0c0b08]/95 backdrop-blur transition-all lg:flex">
       {/* Brand */}
       <div className="p-5 border-b border-[#332d20]">
         <Link href="/" className="block">
@@ -152,5 +193,6 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }
