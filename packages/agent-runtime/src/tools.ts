@@ -263,15 +263,23 @@ export class ToolRegistry {
 
     const target = this.toolApprovalTarget(toolName, args);
     const approved = await pool.query(
-      `SELECT id
-       FROM approval_requests
-       WHERE tenant_id = $1
-         AND agent_id = $2
-         AND action_type = $3
-         AND target = $4
-         AND status = 'approved'
-       ORDER BY created_at DESC
-       LIMIT 1`,
+      `WITH approval AS (
+         SELECT id
+         FROM approval_requests
+         WHERE tenant_id = $1
+           AND agent_id = $2
+           AND action_type = $3
+           AND target = $4
+           AND status = 'approved'
+           AND consumed_at IS NULL
+           AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY created_at DESC
+         LIMIT 1
+       )
+       UPDATE approval_requests
+       SET consumed_at = NOW()
+       WHERE id IN (SELECT id FROM approval)
+       RETURNING id`,
       [tenantId, agentId, `tool:${toolName}`, target],
     );
     if (approved.rows[0]) return;

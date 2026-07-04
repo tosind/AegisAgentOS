@@ -121,6 +121,9 @@ export const ApprovalRequestSchema = z.object({
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
   requestedBy: z.string().uuid().optional(),
   approvedBy: z.string().uuid().optional(),
+  approvedAt: z.string().optional(),
+  expiresAt: z.string().optional(),
+  consumedAt: z.string().optional(),
 });
 
 // ── Agent Task ───────────────────────────────────────────────

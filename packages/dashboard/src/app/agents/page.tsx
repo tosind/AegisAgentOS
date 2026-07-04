@@ -13,7 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import type { AgentSummary, AgentTaskEvent, AgentTaskSummary } from "@/lib/ops-data";
+import type { AgentSessionSummary, AgentSummary, AgentTaskEvent, AgentTaskSummary } from "@/lib/ops-data";
 import { useOpsData } from "@/lib/use-ops-data";
 
 type InspectorState = {
@@ -41,6 +41,11 @@ export default function AgentsPage() {
   const [creating, setCreating] = useState(false);
   const [running, setRunning] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [sessionDraft, setSessionDraft] = useState({
+    title: "Enterprise agent rollout",
+    objective: "Coordinate tasks, approvals, memory, and trace review for this internal agent harness.",
+  });
   const [newAgent, setNewAgent] = useState({
     name: "Operations Analyst",
     role: "enterprise operations agent",
@@ -57,6 +62,7 @@ export default function AgentsPage() {
   const [inspector, setInspector] = useState<InspectorState | null>(null);
   const [trace, setTrace] = useState<TraceState | null>(null);
   const [boardBusy, setBoardBusy] = useState("");
+  const [sessionBusy, setSessionBusy] = useState(false);
 
   useEffect(() => {
     if (!selectedAgentId && data.agents[0]) {
@@ -64,9 +70,19 @@ export default function AgentsPage() {
     }
   }, [data.agents, selectedAgentId]);
 
+  useEffect(() => {
+    if (!selectedSessionId && data.sessions[0]) {
+      setSelectedSessionId(data.sessions[0].id);
+    }
+  }, [data.sessions, selectedSessionId]);
+
   const selectedAgent = useMemo(
     () => data.agents.find((agent) => agent.id === selectedAgentId) || data.agents[0],
     [data.agents, selectedAgentId],
+  );
+  const selectedSession = useMemo(
+    () => data.sessions.find((session) => session.id === selectedSessionId) || data.sessions[0],
+    [data.sessions, selectedSessionId],
   );
 
   const active = data.agents.filter((agent) => agent.status === "active").length;
@@ -95,6 +111,27 @@ export default function AgentsPage() {
     }
   };
 
+  const createSession = async (event: FormEvent) => {
+    event.preventDefault();
+    setSessionBusy(true);
+    try {
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sessionDraft),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Session creation failed");
+      addToast("success", `Session created: ${body.session.title}`);
+      setSelectedSessionId(body.session.id);
+      await refresh();
+    } catch (error: any) {
+      addToast("error", error.message || "Session creation failed");
+    } finally {
+      setSessionBusy(false);
+    }
+  };
+
   const runTask = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedAgent) return;
@@ -107,6 +144,7 @@ export default function AgentsPage() {
         body: JSON.stringify({
           agentId: selectedAgent.id,
           agentName: selectedAgent.name,
+          sessionId: selectedSession?.id || null,
           prompt,
           maxIterations: 4,
         }),
@@ -149,6 +187,7 @@ export default function AgentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "create",
+          sessionId: selectedSession?.id || null,
           agentId: selectedAgent?.id || null,
           agentName: selectedAgent?.name || null,
           ...taskDraft,
@@ -261,6 +300,71 @@ export default function AgentsPage() {
         <MiniStat label="Tasks Today" value={`${tasksToday}`} sub="ledger rows" />
         <MiniStat label="Skills" value={`${skills}`} sub="stored" color="blue" />
       </div>
+
+      <section className="card">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <GitBranch size={18} className="text-[#ffac02]" />
+              <h3 className="text-lg font-semibold">Sessions</h3>
+            </div>
+            <p className="text-xs text-[#9b8460]">
+              Group work into resumable runs with shared task history and trace context.
+            </p>
+          </div>
+          <select
+            value={selectedSession?.id || ""}
+            onChange={(event) => setSelectedSessionId(event.target.value)}
+            className="min-w-72 rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+          >
+            {data.sessions.length === 0 ? (
+              <option value="">No active session</option>
+            ) : (
+              data.sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.title} / {session.status}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        <form onSubmit={createSession} className="mb-4 grid gap-3 xl:grid-cols-[0.45fr_1fr_auto]">
+          <input
+            value={sessionDraft.title}
+            onChange={(event) => setSessionDraft((current) => ({ ...current, title: event.target.value }))}
+            className="rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+            placeholder="Session title"
+            required
+          />
+          <input
+            value={sessionDraft.objective}
+            onChange={(event) => setSessionDraft((current) => ({ ...current, objective: event.target.value }))}
+            className="rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+            placeholder="Session objective"
+          />
+          <button type="submit" disabled={sessionBusy} className="btn btn-primary justify-center">
+            Create Session
+          </button>
+        </form>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {data.sessions.length === 0 ? (
+            <div className="panel border-dashed p-4 text-sm text-[#9b8460] md:col-span-2 xl:col-span-4">
+              No sessions yet.
+            </div>
+          ) : (
+            data.sessions.slice(0, 4).map((session) => (
+              <SessionPill
+                key={session.id}
+                session={session}
+                selected={session.id === selectedSession?.id}
+                onSelect={() => setSelectedSessionId(session.id)}
+              />
+            ))
+          )}
+        </div>
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
         <div className="card">
@@ -539,6 +643,36 @@ export default function AgentsPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function SessionPill({
+  session,
+  selected,
+  onSelect,
+}: {
+  session: AgentSessionSummary;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`panel p-3 text-left transition-colors ${selected ? "border-[#ffac02]/70 bg-[#ffac02]/[0.04]" : "hover:border-[#8a5a16]"}`}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="truncate text-sm font-semibold">{session.title}</span>
+        <span className={`badge shrink-0 text-[10px] ${session.status === "active" ? "badge-success" : session.status === "closed" ? "badge-danger" : "badge-warning"}`}>
+          {session.status}
+        </span>
+      </div>
+      <p className="line-clamp-2 text-xs text-[#9b8460]">{session.objective || "No objective set."}</p>
+      <div className="mono mt-3 flex flex-wrap gap-3 text-[10px] uppercase text-[#9b8460]">
+        <span>{session.taskCount} tasks</span>
+        <span>{session.latestTaskAt ? "active" : "new"}</span>
+      </div>
+    </button>
   );
 }
 

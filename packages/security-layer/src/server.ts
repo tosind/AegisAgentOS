@@ -123,6 +123,7 @@ export function createServer() {
         "llm_call",
       );
       const target = approvalTarget("llm_call", fullText);
+      let approvalToConsume: string | null = null;
 
       if (!evaluation.allowed) {
         // Log blocked attempt
@@ -153,6 +154,7 @@ export function createServer() {
           target,
           ["approved"],
         );
+        approvalToConsume = approved?.id || null;
         if (!approved) {
           const approval = await policyEngine.createApproval(
             tenantId,
@@ -199,6 +201,9 @@ export function createServer() {
         agentConfig,
         tenantPolicy,
       );
+      if (approvalToConsume) {
+        await policyEngine.consumeApproval(approvalToConsume);
+      }
 
       // Log successful call
       await auditLogger.log({

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { DEFAULT_TENANT_ID, proxyJson, serviceUrls } from "@/lib/service-client";
+import { requireDashboardRole } from "@/lib/server-auth";
 
 export async function GET() {
   const { response, body } = await proxyJson(
@@ -13,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireDashboardRole(["admin", "agent_manager", "agent_user"]);
+  if ("response" in auth) return auth.response;
+
   const payload = await request.json();
   const createOnly = payload.mode === "create" || payload.runNow === false;
   if (createOnly) {
@@ -22,6 +26,7 @@ export async function POST(request: Request) {
         method: "POST",
         body: JSON.stringify({
           tenantId: DEFAULT_TENANT_ID,
+          sessionId: payload.sessionId || null,
           agentId: payload.agentId || null,
           agentName: payload.agentName || null,
           title: payload.title,
@@ -43,6 +48,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         taskId: payload.taskId || randomUUID(),
         tenantId: DEFAULT_TENANT_ID,
+        sessionId: payload.sessionId || null,
         agentId: payload.agentId,
         agentName: payload.agentName,
         title: payload.title,

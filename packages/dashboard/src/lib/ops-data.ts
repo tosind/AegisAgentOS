@@ -18,6 +18,7 @@ export type AgentTaskSummary = {
   id: string;
   externalTaskId: string;
   agentId: string | null;
+  sessionId: string | null;
   agentName: string | null;
   title: string;
   prompt: string;
@@ -32,6 +33,16 @@ export type AgentTaskSummary = {
   durationMs: number | null;
   createdAt: string;
   completedAt: string | null;
+};
+
+export type AgentSessionSummary = {
+  id: string;
+  title: string;
+  objective: string | null;
+  status: "active" | "paused" | "closed";
+  taskCount: number;
+  latestTaskAt: string | null;
+  createdAt: string;
 };
 
 export type AgentTaskEvent = {
@@ -75,6 +86,7 @@ export type ServiceHealth = {
 export type OpsData = {
   source: "live" | "demo";
   agents: AgentSummary[];
+  sessions: AgentSessionSummary[];
   tasks: AgentTaskSummary[];
   auditLogs: AuditEvent[];
   connections: IntegrationConnection[];
@@ -108,10 +120,12 @@ export const demoConnections: IntegrationConnection[] = [
 ];
 
 export const demoTasks: AgentTaskSummary[] = [];
+export const demoSessions: AgentSessionSummary[] = [];
 
 export const demoOpsData: OpsData = {
   source: "demo",
   agents: demoAgents,
+  sessions: demoSessions,
   tasks: demoTasks,
   auditLogs: demoAuditLogs,
   connections: demoConnections,

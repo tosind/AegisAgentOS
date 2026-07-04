@@ -177,6 +177,10 @@ export class PolicyEngine {
          AND action_type = $3
          AND target = $4
          AND status = ANY($5)
+         AND (
+           status <> 'approved'
+           OR (consumed_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()))
+         )
        ORDER BY created_at DESC
        LIMIT 1`,
       [tenantId, agentId, actionType, target, statuses],
@@ -212,10 +216,26 @@ export class PolicyEngine {
       `UPDATE approval_requests
        SET status = $2,
            approved_by = $3,
-           approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END
+           approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END,
+           expires_at = CASE WHEN $2 = 'approved' THEN COALESCE(expires_at, NOW() + INTERVAL '24 hours') ELSE expires_at END
        WHERE id = $1
        RETURNING *`,
       [params.approvalId, params.status, params.actorId || null],
+    );
+
+    return result.rows[0] ? this.rowToApproval(result.rows[0]) : null;
+  }
+
+  async consumeApproval(approvalId: string): Promise<ApprovalRequest | null> {
+    const result = await pool.query(
+      `UPDATE approval_requests
+       SET consumed_at = NOW()
+       WHERE id = $1
+         AND status = 'approved'
+         AND consumed_at IS NULL
+         AND (expires_at IS NULL OR expires_at > NOW())
+       RETURNING *`,
+      [approvalId],
     );
 
     return result.rows[0] ? this.rowToApproval(result.rows[0]) : null;
@@ -296,7 +316,7 @@ export class PolicyEngine {
   }
 
   private rowToApproval(row: any): ApprovalRequest {
-    return {
+    const approval: any = {
       id: row.id,
       tenantId: row.tenant_id,
       agentId: row.agent_id,
@@ -306,6 +326,10 @@ export class PolicyEngine {
       status: row.status,
       requestedBy: row.requested_by,
       approvedBy: row.approved_by,
+      approvedAt: row.approved_at ? new Date(row.approved_at).toISOString() : undefined,
+      expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : undefined,
+      consumedAt: row.consumed_at ? new Date(row.consumed_at).toISOString() : undefined,
     };
+    return approval as ApprovalRequest;
   }
 }

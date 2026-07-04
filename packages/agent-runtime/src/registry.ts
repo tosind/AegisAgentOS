@@ -26,6 +26,7 @@ export type RuntimeTask = {
   id: string;
   externalTaskId: string;
   tenantId: string;
+  sessionId: string | null;
   agentId: string | null;
   agentName: string | null;
   title: string;
@@ -42,6 +43,21 @@ export type RuntimeTask = {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+};
+
+export type RuntimeSession = {
+  id: string;
+  tenantId: string;
+  title: string;
+  objective: string | null;
+  status: "active" | "paused" | "closed";
+  createdBy: string | null;
+  metadata: Record<string, unknown>;
+  taskCount: number;
+  latestTaskAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
 };
 
 export type RuntimeTaskEvent = {
@@ -103,6 +119,7 @@ function rowToTask(row: any): RuntimeTask {
     id: row.id,
     externalTaskId: row.external_task_id,
     tenantId: row.tenant_id,
+    sessionId: row.session_id,
     agentId: row.agent_id,
     agentName: row.agent_name,
     title: row.title || row.prompt?.slice(0, 72) || "Untitled task",
@@ -122,6 +139,23 @@ function rowToTask(row: any): RuntimeTask {
   };
 }
 
+function rowToSession(row: any): RuntimeSession {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    title: row.title,
+    objective: row.objective,
+    status: row.status || "active",
+    createdBy: row.created_by,
+    metadata: parseJson(row.metadata, {}),
+    taskCount: Number(row.task_count || 0),
+    latestTaskAt: row.latest_task_at ? new Date(row.latest_task_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
+    closedAt: row.closed_at ? new Date(row.closed_at).toISOString() : null,
+  };
+}
+
 function rowToEvent(row: any): RuntimeTaskEvent {
   return {
     id: row.id,
@@ -138,6 +172,90 @@ function rowToEvent(row: any): RuntimeTaskEvent {
 }
 
 export class AgentRegistry {
+  async createSession(params: {
+    tenantId?: string;
+    title: string;
+    objective?: string;
+    createdBy?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<RuntimeSession> {
+    const tenantId = params.tenantId || DEFAULT_TENANT_ID;
+    const result = await pool.query(
+      `INSERT INTO agent_sessions (tenant_id, title, objective, created_by, metadata)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *, 0 AS task_count, NULL AS latest_task_at`,
+      [
+        tenantId,
+        params.title,
+        params.objective || null,
+        params.createdBy || null,
+        JSON.stringify(params.metadata || {}),
+      ],
+    );
+    return rowToSession(result.rows[0]);
+  }
+
+  async listSessions(tenantId = DEFAULT_TENANT_ID, limit = 25): Promise<RuntimeSession[]> {
+    const result = await pool.query(
+      `SELECT s.*,
+              COUNT(t.id) AS task_count,
+              MAX(t.created_at) AS latest_task_at
+       FROM agent_sessions s
+       LEFT JOIN agent_tasks t ON t.session_id = s.id
+       WHERE s.tenant_id = $1
+       GROUP BY s.id
+       ORDER BY s.created_at DESC
+       LIMIT $2`,
+      [tenantId, limit],
+    );
+    return result.rows.map(rowToSession);
+  }
+
+  async getSession(sessionId: string): Promise<RuntimeSession | null> {
+    const result = await pool.query(
+      `SELECT s.*,
+              COUNT(t.id) AS task_count,
+              MAX(t.created_at) AS latest_task_at
+       FROM agent_sessions s
+       LEFT JOIN agent_tasks t ON t.session_id = s.id
+       WHERE s.id = $1
+       GROUP BY s.id
+       LIMIT 1`,
+      [sessionId],
+    );
+    return result.rows[0] ? rowToSession(result.rows[0]) : null;
+  }
+
+  async updateSession(params: {
+    sessionId: string;
+    status?: RuntimeSession["status"];
+    title?: string;
+    objective?: string;
+  }): Promise<RuntimeSession | null> {
+    const current = await this.getSession(params.sessionId);
+    if (!current) return null;
+
+    const result = await pool.query(
+      `UPDATE agent_sessions
+       SET title = $2,
+           objective = $3,
+           status = $4,
+           closed_at = CASE WHEN $4 = 'closed' THEN COALESCE(closed_at, NOW()) ELSE NULL END,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *,
+         (SELECT COUNT(*) FROM agent_tasks t WHERE t.session_id = agent_sessions.id) AS task_count,
+         (SELECT MAX(created_at) FROM agent_tasks t WHERE t.session_id = agent_sessions.id) AS latest_task_at`,
+      [
+        params.sessionId,
+        params.title || current.title,
+        params.objective === undefined ? current.objective : params.objective,
+        params.status || current.status,
+      ],
+    );
+    return rowToSession(result.rows[0]);
+  }
+
   async listAgents(tenantId = DEFAULT_TENANT_ID): Promise<RuntimeAgent[]> {
     const result = await pool.query(
       `SELECT
@@ -276,6 +394,7 @@ export class AgentRegistry {
     tenantId: string;
     agentId: string;
     agentName: string;
+    sessionId?: string | null;
     externalTaskId?: string;
     title?: string;
     prompt: string;
@@ -283,6 +402,7 @@ export class AgentRegistry {
     const result = await pool.query(
       `INSERT INTO agent_tasks (
          tenant_id,
+         session_id,
          agent_id,
          agent_name,
          external_task_id,
@@ -292,10 +412,11 @@ export class AgentRegistry {
          status,
          started_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, 'running', 'running', NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'running', 'running', NOW())
        RETURNING *`,
       [
         params.tenantId,
+        params.sessionId || null,
         params.agentId,
         params.agentName,
         params.externalTaskId || randomUUID(),
@@ -319,6 +440,7 @@ export class AgentRegistry {
 
   async createTask(params: {
     tenantId?: string;
+    sessionId?: string | null;
     agentId?: string | null;
     agentName?: string | null;
     title: string;
@@ -330,6 +452,7 @@ export class AgentRegistry {
     const result = await pool.query(
       `INSERT INTO agent_tasks (
          tenant_id,
+         session_id,
          agent_id,
          agent_name,
          external_task_id,
@@ -339,10 +462,11 @@ export class AgentRegistry {
          board_status,
          status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queued')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued')
        RETURNING *`,
       [
         tenantId,
+        params.sessionId || null,
         params.agentId || null,
         params.agentName || null,
         randomUUID(),
@@ -369,6 +493,7 @@ export class AgentRegistry {
   async updateTask(params: {
     taskId: string;
     tenantId?: string;
+    sessionId?: string | null;
     agentId?: string | null;
     agentName?: string | null;
     title?: string;
@@ -387,7 +512,8 @@ export class AgentRegistry {
            title = $4,
            prompt = $5,
            priority = $6,
-           board_status = $7
+           board_status = $7,
+           session_id = $8
        WHERE id = $1
        RETURNING *`,
       [
@@ -398,6 +524,7 @@ export class AgentRegistry {
         params.prompt || current.prompt,
         params.priority || current.priority,
         params.boardStatus || current.boardStatus,
+        params.sessionId === undefined ? current.sessionId : params.sessionId,
       ],
     );
 
@@ -526,6 +653,18 @@ export class AgentRegistry {
       [tenantId, limit],
     );
 
+    return result.rows.map(rowToTask);
+  }
+
+  async listSessionTasks(sessionId: string, limit = 50): Promise<RuntimeTask[]> {
+    const result = await pool.query(
+      `SELECT *
+       FROM agent_tasks
+       WHERE session_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [sessionId, limit],
+    );
     return result.rows.map(rowToTask);
   }
 

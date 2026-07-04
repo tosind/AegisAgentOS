@@ -69,9 +69,26 @@ CREATE TABLE IF NOT EXISTS agent_configs (
 );
 
 -- ── Agent Task Ledger ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  objective TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  closed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_tenant_time ON agent_sessions (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_status ON agent_sessions (tenant_id, status);
+
 CREATE TABLE IF NOT EXISTS agent_tasks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id UUID NOT NULL,
+  session_id UUID REFERENCES agent_sessions(id) ON DELETE SET NULL,
   agent_id UUID,
   agent_name TEXT,
   external_task_id TEXT NOT NULL,
@@ -94,6 +111,7 @@ CREATE TABLE IF NOT EXISTS agent_tasks (
 ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT 'Untitled task';
 ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS board_status TEXT NOT NULL DEFAULT 'queued';
 ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'medium';
+ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES agent_sessions(id) ON DELETE SET NULL;
 ALTER TABLE agent_tasks ALTER COLUMN agent_id DROP NOT NULL;
 ALTER TABLE agent_tasks ALTER COLUMN agent_name DROP NOT NULL;
 
@@ -101,6 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_tasks_tenant_time ON agent_tasks (tenant_id
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_time ON agent_tasks (agent_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_board ON agent_tasks (tenant_id, board_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_session ON agent_tasks (session_id, created_at DESC);
 
 -- ── Agent Execution Trace Events ───────────────────────────
 CREATE TABLE IF NOT EXISTS agent_task_events (
@@ -223,7 +242,11 @@ CREATE TABLE IF NOT EXISTS approval_requests (
   requested_by UUID,
   approved_by UUID,
   approved_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  consumed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE approval_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE approval_requests ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_approvals_status ON approval_requests (tenant_id, status);

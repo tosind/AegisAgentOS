@@ -6,11 +6,11 @@ Status: alpha internal harness. The workspace builds and tests cleanly, the dash
 
 ## What Is Included
 
-- Next.js admin dashboard for agents, Kanban work management, execution traces, approval queues, token budgets, audit logs, policies, integrations, onboarding, and settings
-- Agent runtime service with DB-backed agent registry, task ledger, execution events, memory, skills, tool execution, and Paperclip webhook intake
+- Next.js admin dashboard for agents, resumable sessions, Kanban work management, streaming execution traces, approval queues, token budgets, audit logs, policies, integrations, onboarding, and settings
+- Agent runtime service with DB-backed agent registry, sessions, task ledger, execution events, memory, skills, tool execution, and Paperclip/Hermes/OpenClaw task intake
 - Security layer with PII detection, policy evaluation, approval enforcement, budget checks, audit logging, and local-first LLM routing
 - MCP hub with connector scaffolds for PostgreSQL, Slack, GitHub, REST APIs, SMTP email, and filesystem tools
-- Postgres + pgvector schema for policies, agents, task runs, trace events, audit logs, memory, skills, MCP connections, and approvals
+- Postgres + pgvector schema for policies, agents, sessions, task runs, trace events, audit logs, memory, skills, MCP connections, and approvals
 - Docker Compose stack for dashboard, Paperclip, Postgres, Ollama, vLLM, runtime, security layer, MCP hub, and nginx
 
 ## Quick Start
@@ -78,13 +78,15 @@ The Agents page is a live harness when the runtime is online:
 - `Create Agent` writes to `agent_configs`
 - `Run Task` calls the runtime `/execute` endpoint through `/api/tasks`
 - the Kanban board creates queued cards in `agent_tasks`
+- sessions group related cards and runs in `agent_sessions`
 - `Run` on a card executes that existing work item through `/tasks/:id/run`
 - task output, board status, priority, and errors are persisted in `agent_tasks`
 - observable execution events are persisted in `agent_task_events`
 - successful runs write memory to `agent_memory`
 - LLM calls write audit rows through the security layer
-- approval-gated prompts and high-risk tool calls create `approval_requests`
+- approval-gated prompts and high-risk tool calls create one-time `approval_requests`
 - token usage is checked against `maxTokensPerRequest` and `dailyTokenBudget`
+- Paperclip, Hermes, and OpenClaw task payloads can be normalized through `/adapters/:source/tasks`
 
 The trace view intentionally records observable execution metadata, model summaries, tool calls, and state transitions. It does not expose hidden model chain-of-thought.
 
@@ -92,10 +94,10 @@ The trace view intentionally records observable execution metadata, model summar
 
 Aegis is not enterprise-ready yet. The current repo is a functional pre-production harness for building toward Hermes/OpenClaw/Paperclip-style internal agents. Before using it for production operations, the project still needs:
 
-- hardened authentication and role-based access control across every service route
-- deeper approval workflows for delegated reviewers, expiry windows, and one-time approval consumption
-- first-class Paperclip and Hermes/OpenClaw adapters instead of only compatible task/runtime primitives
-- streaming execution traces and resumable multi-agent sessions
+- full route-by-route authentication coverage for read APIs and public pages
+- deeper approval workflows for delegated reviewers, escalation paths, and policy-specific expiry windows
+- richer Paperclip and Hermes/OpenClaw adapters with bidirectional status sync
+- browser-native live trace views backed by the streaming trace endpoint
 - richer budgets, quotas, tenant isolation tests, and stronger policy enforcement around MCP tools
 - production secret storage, backup/restore drills, audit retention, and observability dashboards
 

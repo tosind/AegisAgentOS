@@ -18,11 +18,13 @@ Agent configuration lives in `agent_configs`:
 
 Agent memory lives in `agent_memory` and requires pgvector. Keep embeddings tenant-scoped and agent-scoped.
 
-Task work lives in `agent_tasks`. A task can be queued as a Kanban card, moved across board statuses, assigned to an agent, then updated to `succeeded` or `failed` after execution. Rows store title, prompt, board status, priority, output, token count, duration, iterations, and tool calls.
+Sessions live in `agent_sessions`. Use them to group related task cards, traces, approvals, and memory writes into a resumable unit of work.
+
+Task work lives in `agent_tasks`. A task can be queued as a Kanban card, attached to a session, moved across board statuses, assigned to an agent, then updated to `succeeded` or `failed` after execution. Rows store title, prompt, board status, priority, output, token count, duration, iterations, and tool calls.
 
 Observable execution events live in `agent_task_events`. The runtime appends state transitions, model call metadata, tool call metadata, memory writes, and completion/failure events. This is an audit-friendly activity trace, not hidden model chain-of-thought.
 
-Approval gates live in `approval_requests`. The security layer creates requests for approval-required LLM calls, and the runtime creates requests for high-risk tools. Approved requests allow the matching work item to be retried.
+Approval gates live in `approval_requests`. The security layer creates requests for approval-required LLM calls, and the runtime creates requests for high-risk tools. Approved requests allow the matching work item to be retried once before they are consumed. Approved requests expire after 24 hours by default.
 
 ## Register an Agent
 
@@ -133,6 +135,12 @@ Read its execution trace:
 curl http://localhost:8421/tasks/<task-row-id>/events
 ```
 
+Stream trace events:
+
+```bash
+curl -N http://localhost:8421/tasks/<task-row-id>/events/stream
+```
+
 If execution creates an approval request, approve it from the dashboard Policies page or directly through the security layer:
 
 ```bash
@@ -143,6 +151,25 @@ curl -X PATCH http://localhost:8423/approvals/<approval-id> \
 ```
 
 Then rerun the blocked card.
+
+## Adapter Intake
+
+Paperclip, Hermes, and OpenClaw task payloads can be normalized into the same session and task ledger:
+
+```bash
+curl -X POST http://localhost:8421/adapters/openclaw/tasks \
+  -H "Authorization: Bearer $AGENT_RUNTIME_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "agentId": "<agent-config-or-paperclip-id>",
+    "session": { "title": "Platform readiness", "objective": "Prepare the internal harness" },
+    "task": { "title": "Check blockers", "description": "Review current blockers and prepare next actions." },
+    "priority": "high"
+  }'
+```
+
+The adapter returns an accepted queued task and records an `adapter_ingested` trace event.
 
 To use Ollama, make sure the model exists:
 
@@ -198,6 +225,7 @@ Before enabling an agent for real users:
 - Run a harmless task and inspect `audit_logs`.
 - Inspect the task's `agent_task_events` trace for expected model/tool/memory activity.
 - Confirm approval-required prompts and high-risk tools create `approval_requests` instead of executing.
+- Confirm approved requests are consumed after one matching execution.
 - Confirm token usage is under `dailyTokenBudget`.
 - Confirm PII is scrubbed before any external API route.
 - Confirm memory is written to `agent_memory` only for the expected tenant.

@@ -161,18 +161,38 @@ The live flow is:
 
 1. Open `http://localhost:3000/agents`.
 2. Create an agent. This writes an `agent_configs` row.
-3. Queue work on the Kanban board. The dashboard posts to `/api/tasks` with `mode: "create"` and writes a queued `agent_tasks` row.
-4. Run a card. The dashboard posts to `/api/tasks/:id/run`, which calls the runtime `/tasks/:id/run` endpoint.
-5. The runtime marks the existing task `running`, assigns the selected agent, and starts appending observable trace rows to `agent_task_events`.
-6. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
-7. If the prompt requires approval, the security layer creates an `approval_requests` row and blocks the run until it is approved.
-8. The security layer checks `maxTokensPerRequest` and `dailyTokenBudget` before routing the request.
-9. The runtime writes output, token count, duration, tool calls, and the final board status back to `agent_tasks`.
-10. Successful runs store task memory in `agent_memory`.
+3. Create or select a session. The dashboard writes an `agent_sessions` row and attaches new work to it.
+4. Queue work on the Kanban board. The dashboard posts to `/api/tasks` with `mode: "create"` and writes a queued `agent_tasks` row.
+5. Run a card. The dashboard posts to `/api/tasks/:id/run`, which calls the runtime `/tasks/:id/run` endpoint.
+6. The runtime marks the existing task `running`, assigns the selected agent, and starts appending observable trace rows to `agent_task_events`.
+7. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
+8. If the prompt requires approval, the security layer creates an `approval_requests` row and blocks the run until it is approved.
+9. The security layer checks `maxTokensPerRequest` and `dailyTokenBudget` before routing the request.
+10. The runtime writes output, token count, duration, tool calls, and the final board status back to `agent_tasks`.
+11. Successful runs store task memory in `agent_memory`.
 
 For one-off execution, the dashboard `Run Task` form still posts through `/api/tasks` to the runtime `/execute` endpoint. That path creates and runs a task immediately instead of first placing it on the Kanban board.
 
-The trace view records state transitions such as task creation, context preparation, memory/skill loading, model calls, tool calls, memory writes, success, and failure. It does not expose hidden model chain-of-thought.
+The trace view records state transitions such as task creation, context preparation, memory/skill loading, model calls, tool calls, memory writes, success, and failure. It does not expose hidden model chain-of-thought. Trace events can also be streamed from `/tasks/:id/events/stream` or the dashboard proxy `/api/tasks/:id/events/stream`.
+
+## Adapter Intake
+
+Runtime task intake is available for Paperclip, Hermes, and OpenClaw-shaped payloads:
+
+```bash
+curl -X POST http://localhost:8421/adapters/hermes/tasks \
+  -H "Authorization: Bearer $AGENT_RUNTIME_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "agentId": "<agent-id>",
+    "session": { "title": "Incident review", "objective": "Coordinate investigation tasks" },
+    "task": { "title": "Summarize signal", "description": "Review the latest trace and summarize next steps." },
+    "priority": "high"
+  }'
+```
+
+The adapter creates or attaches a session, queues a task card, and records an `adapter_ingested` trace event. Bidirectional status sync with those upstream systems is still roadmap work.
 
 ## Governance Console
 
@@ -184,7 +204,7 @@ Open `http://localhost:3000/policies` to inspect live policy posture:
 - max tokens per request and daily token budget
 - active PII patterns and default approval gates
 
-LLM calls that match approval-triggering classifications are blocked until the matching approval is approved. High-risk tools such as shell commands, file writes, web search, deploy/send/update/delete-style tools, and payment/external tools also create approval requests before execution.
+LLM calls that match approval-triggering classifications are blocked until the matching approval is approved. High-risk tools such as shell commands, file writes, web search, deploy/send/update/delete-style tools, and payment/external tools also create approval requests before execution. Approved requests expire after 24 hours by default and are consumed the first time matching work uses them.
 
 If a model is not installed, the task fails and the failure is preserved in `agent_tasks`; the UI should show that error instead of pretending the agent ran.
 

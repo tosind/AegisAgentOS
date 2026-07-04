@@ -180,9 +180,22 @@ CREATE TABLE audit_logs (
 );
 
 -- Agent task ledger
+CREATE TABLE agent_sessions (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  objective TEXT,
+  status TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP,
+  closed_at TIMESTAMP
+);
+
 CREATE TABLE agent_tasks (
   id UUID PRIMARY KEY,
   tenant_id UUID NOT NULL,
+  session_id UUID REFERENCES agent_sessions(id),
   agent_id UUID,
   agent_name TEXT,
   external_task_id TEXT NOT NULL,
@@ -250,6 +263,8 @@ CREATE TABLE approval_requests (
   requested_by UUID,
   approved_by UUID,
   approved_at TIMESTAMP,
+  expires_at TIMESTAMP,
+  consumed_at TIMESTAMP,
   created_at TIMESTAMP
 );
 ```

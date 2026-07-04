@@ -63,6 +63,138 @@ export function createServer() {
     }
   });
 
+  // ── Sessions ─────────────────────────────────────────────
+  app.get("/sessions", async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req.query.tenantId as string) || "00000000-0000-0000-0000-000000000000";
+      const limit = parseInt((req.query.limit as string) || "25", 10);
+      const sessions = await registry.listSessions(tenantId, limit);
+      res.json({ sessions });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/sessions", authMiddleware, requireFields("title"), async (req: Request, res: Response) => {
+    try {
+      const session = await registry.createSession({
+        tenantId: req.body.tenantId || "00000000-0000-0000-0000-000000000000",
+        title: req.body.title,
+        objective: req.body.objective,
+        createdBy: req.body.createdBy,
+        metadata: req.body.metadata || {},
+      });
+      res.status(201).json({ session });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/sessions/:id", async (req: Request, res: Response) => {
+    try {
+      const session = await registry.getSession(req.params.id);
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+      const tasks = await registry.listSessionTasks(req.params.id, 50);
+      res.json({ session, tasks });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/sessions/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const session = await registry.updateSession({
+        sessionId: req.params.id,
+        title: req.body.title,
+        objective: req.body.objective,
+        status: req.body.status,
+      });
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+      res.json({ session });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Adapter intake: Paperclip / Hermes / OpenClaw ─────────
+  app.post("/adapters/:source/tasks", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const source = String(req.params.source || "").toLowerCase();
+      if (!["paperclip", "hermes", "openclaw"].includes(source)) {
+        res.status(400).json({ error: "source must be paperclip, hermes, or openclaw" });
+        return;
+      }
+
+      const payload = req.body || {};
+      const tenantId =
+        payload.tenantId ||
+        payload.companyId ||
+        payload.orgId ||
+        payload.context?.tenantId ||
+        payload.context?.companyId ||
+        "00000000-0000-0000-0000-000000000000";
+      const agentId =
+        payload.agentId ||
+        payload.assigneeAgentId ||
+        payload.agent?.id ||
+        payload.context?.agentId ||
+        null;
+      const agent = agentId ? await registry.findAgent(agentId) : null;
+      const taskPayload = payload.task || payload.issue || payload;
+      const prompt = taskPayload.prompt || taskPayload.description || payload.prompt || payload.description;
+      if (!prompt) {
+        res.status(400).json({ error: "prompt or description is required" });
+        return;
+      }
+
+      let sessionId = payload.sessionId || payload.context?.sessionId || null;
+      if (!sessionId && (payload.session || payload.goal)) {
+        const session = await registry.createSession({
+          tenantId,
+          title: payload.session?.title || payload.goal?.title || `${source} intake`,
+          objective: payload.session?.objective || payload.goal?.description || null,
+          createdBy: source,
+          metadata: { source, externalSessionId: payload.session?.id || payload.goal?.id || null },
+        });
+        sessionId = session.id;
+      }
+
+      const task = await registry.createTask({
+        tenantId,
+        sessionId,
+        agentId: agent?.id || agentId,
+        agentName: agent?.name || payload.agentName || payload.agent?.name || null,
+        title: taskPayload.title || payload.title || prompt.slice(0, 72),
+        prompt,
+        priority: payload.priority || taskPayload.priority || "medium",
+        boardStatus: payload.boardStatus || "queued",
+      });
+      await registry.addTaskEvent({
+        tenantId,
+        taskId: task.id,
+        agentId: task.agentId,
+        eventType: "adapter_ingested",
+        title: `${source} task ingested`,
+        message: task.title,
+        payload: {
+          source,
+          externalTaskId: payload.taskId || payload.id || taskPayload.id || null,
+          runNow: !!payload.runNow,
+        },
+      });
+
+      res.status(202).json({ accepted: true, source, task });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/tasks", async (req: Request, res: Response) => {
     try {
       const tenantId = (req.query.tenantId as string) || "00000000-0000-0000-0000-000000000000";
@@ -79,6 +211,7 @@ export function createServer() {
       const agent = req.body.agentId ? await registry.findAgent(req.body.agentId) : null;
       const task = await registry.createTask({
         tenantId: req.body.tenantId || "00000000-0000-0000-0000-000000000000",
+        sessionId: req.body.sessionId || null,
         agentId: agent?.id || req.body.agentId || null,
         agentName: agent?.name || req.body.agentName || null,
         title: req.body.title,
@@ -98,6 +231,7 @@ export function createServer() {
       const task = await registry.updateTask({
         taskId: req.params.id,
         tenantId: req.body.tenantId,
+        sessionId: req.body.sessionId,
         agentId: agent?.id ?? req.body.agentId,
         agentName: agent?.name ?? req.body.agentName,
         title: req.body.title,
@@ -122,6 +256,43 @@ export function createServer() {
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  app.get("/tasks/:id/events/stream", async (req: Request, res: Response) => {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    });
+
+    let lastSequence = Number(req.query.after || 0);
+    let closed = false;
+    req.on("close", () => {
+      closed = true;
+    });
+
+    const sendEvents = async () => {
+      try {
+        const events = await registry.listTaskEvents(req.params.id);
+        for (const event of events.filter((item) => item.sequence > lastSequence)) {
+          lastSequence = event.sequence;
+          res.write(`event: trace\n`);
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        }
+      } catch (err: any) {
+        res.write(`event: error\n`);
+        res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+      }
+    };
+
+    await sendEvents();
+    const interval = setInterval(() => {
+      if (closed) {
+        clearInterval(interval);
+        return;
+      }
+      void sendEvents();
+    }, 1500);
   });
 
   app.post("/tasks/:id/run", authMiddleware, async (req: Request, res: Response) => {
@@ -204,6 +375,7 @@ export function createServer() {
         tenantId,
         agentId,
         agentName,
+        sessionId,
         prompt,
         context,
         maxIterations,
@@ -230,6 +402,7 @@ export function createServer() {
         tenantId,
         agentId: agent.id,
         agentName: agentName || agent.name,
+        sessionId: sessionId || null,
         externalTaskId: taskId,
         title: req.body.title,
         prompt,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   demoOpsData,
+  type AgentSessionSummary,
   type AgentTaskSummary,
   type AgentSummary,
   type AuditEvent,
@@ -77,6 +78,7 @@ function mapTasks(rows: any[] | undefined): AgentTaskSummary[] {
   return rows.map((row) => ({
     id: row.id,
     externalTaskId: row.externalTaskId || row.external_task_id || row.id,
+    sessionId: row.sessionId || row.session_id || null,
     agentId: row.agentId || row.agent_id || null,
     agentName: row.agentName || row.agent_name || null,
     title: row.title || row.prompt?.slice(0, 72) || "Untitled task",
@@ -95,11 +97,27 @@ function mapTasks(rows: any[] | undefined): AgentTaskSummary[] {
   }));
 }
 
+function mapSessions(rows: any[] | undefined): AgentSessionSummary[] {
+  if (!rows?.length) return [];
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    objective: row.objective || null,
+    status: row.status || "active",
+    taskCount: row.taskCount || row.task_count || 0,
+    latestTaskAt: row.latestTaskAt || row.latest_task_at || null,
+    createdAt: row.createdAt || row.created_at,
+  }));
+}
+
 export async function GET() {
-  const [serviceHealth, runtimeAgents, runtimeTasks, audit, connections, backends] = await Promise.all([
+  const [serviceHealth, runtimeAgents, runtimeSessions, runtimeTasks, audit, connections, backends] = await Promise.all([
     checkHealth(),
     getJson<{ agents?: any[] }>(
       `${serviceUrls.agentRuntime}/agents?tenantId=${DEFAULT_TENANT_ID}`,
+    ),
+    getJson<{ sessions?: any[] }>(
+      `${serviceUrls.agentRuntime}/sessions?tenantId=${DEFAULT_TENANT_ID}&limit=25`,
     ),
     getJson<{ tasks?: any[] }>(
       `${serviceUrls.agentRuntime}/tasks?tenantId=${DEFAULT_TENANT_ID}&limit=25`,
@@ -124,6 +142,7 @@ export async function GET() {
   return NextResponse.json({
     source,
     agents: mapAgents(runtimeAgents?.agents, serviceHealth.agentRuntime),
+    sessions: mapSessions(runtimeSessions?.sessions),
     tasks: mapTasks(runtimeTasks?.tasks),
     auditLogs: mapAuditRows(auditRows),
     connections: mapConnections(connections?.connections),
