@@ -34,6 +34,7 @@ VALUES (
     "scrubPII": true,
     "piiPatterns": ["email", "phone", "ssn", "credit_card", "api_key"],
     "maxTokensPerRequest": 32768,
+    "dailyTokenBudget": 250000,
     "requireApprovalFor": ["deploy", "financial", "external_api_call"],
     "auditLevel": "all"
   }',

@@ -1,69 +1,191 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  Check,
+  ClipboardList,
+  Gauge,
+  Globe2,
+  Hand,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+
+type Approval = {
+  id: string;
+  tenantId: string;
+  agentId: string;
+  actionType: string;
+  target?: string | null;
+  details: Record<string, any>;
+  status: "pending" | "approved" | "rejected";
+  requestedBy?: string | null;
+  approvedBy?: string | null;
+};
+
+type Usage = {
+  tenantId: string;
+  usedTokensToday: number;
+  dailyTokenBudget: number;
+  maxTokensPerRequest: number;
+  remainingTokensToday: number;
+};
 
 export default function PoliciesPage() {
   const { addToast } = useToast();
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
+
+  const pending = approvals.filter((approval) => approval.status === "pending");
+  const budgetPercent = useMemo(() => {
+    if (!usage?.dailyTokenBudget) return 0;
+    return Math.min(100, Math.round((usage.usedTokensToday / usage.dailyTokenBudget) * 100));
+  }, [usage]);
+
+  const loadGovernance = async () => {
+    setLoading(true);
+    try {
+      const [approvalResponse, usageResponse] = await Promise.all([
+        fetch("/api/approvals?limit=25", { cache: "no-store" }),
+        fetch("/api/usage", { cache: "no-store" }),
+      ]);
+      const approvalBody = await approvalResponse.json();
+      const usageBody = await usageResponse.json();
+      if (!approvalResponse.ok) throw new Error(approvalBody.error || "Could not load approvals");
+      if (!usageResponse.ok) throw new Error(usageBody.error || "Could not load usage");
+      setApprovals(approvalBody.approvals || []);
+      setUsage(usageBody.usage || null);
+    } catch (error: any) {
+      addToast("error", error.message || "Could not load governance data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadGovernance();
+  }, []);
+
+  const decide = async (approval: Approval, status: "approved" | "rejected") => {
+    setBusy(`${approval.id}:${status}`);
+    try {
+      const response = await fetch(`/api/approvals/${approval.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Approval update failed");
+      addToast("success", `Request ${status}`);
+      await loadGovernance();
+    } catch (error: any) {
+      addToast("error", error.message || "Approval update failed");
+    } finally {
+      setBusy("");
+    }
+  };
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div className="max-w-[1500px] space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-start">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Security Policies</h2>
-          <p className="text-[#9b8460] text-sm mt-1">Define what agents can and cannot do</p>
+          <div className="mono mb-3 flex flex-wrap items-center gap-2 text-[11px] uppercase text-[#9b8460]">
+            <span className="badge badge-warning px-2 py-0.5 text-[10px]">Governance</span>
+            <span>{pending.length} pending approvals</span>
+          </div>
+          <h2 className="display text-[2rem] font-semibold leading-tight text-[#fff7e8]">
+            Policy Control
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm text-[#d8c19d]">
+            Enforce local-first routing, approval gates, tool permissions, and token budgets before agents touch sensitive systems.
+          </p>
         </div>
         <button
-          onClick={() => addToast("info", "New policy form coming soon")}
-          className="btn btn-primary text-sm"
+          onClick={() => void loadGovernance()}
+          disabled={loading}
+          className="btn btn-secondary text-sm"
         >
-          + New Policy
+          <RefreshCw size={14} />
+          {loading ? "Refreshing" : "Refresh"}
         </button>
       </div>
 
-      {/* Default Policy */}
-      <div className="card border-[#ffac02]/20">
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-none bg-[#ffac02]/10 flex items-center justify-center">
-              <span className="text-lg">🛡</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold">Default Enterprise Policy</h3>
-                <span className="badge badge-success text-[10px]">Active</span>
-                <span className="badge badge-info text-[10px]">Priority 0</span>
+      <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <section className="card">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center border border-[#ffac02]/30 bg-[#ffac02]/10 text-[#ffac02]">
+                <ShieldCheck size={19} />
               </div>
-              <p className="text-xs text-[#d8c19d] mt-1">Local-first, no external API calls, auto-scrub PII</p>
+              <div>
+                <h3 className="text-lg font-semibold">Default Enterprise Policy</h3>
+                <p className="mt-1 text-xs text-[#9b8460]">Local-first, PII scrubbed, approval-gated</p>
+              </div>
+            </div>
+            <span className="badge badge-success text-[10px]">Active</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <RuleBox icon={Globe2} label="External API Calls" value="Blocked" detail="Local Ollama/vLLM unless explicitly approved" negative />
+            <RuleBox icon={Search} label="PII Scrubbing" value="Enabled" detail="Email, phone, SSN, cards, API keys" positive />
+            <RuleBox icon={Hand} label="Approval Required" value="Live" detail="LLM and high-risk tool calls create queue items" />
+            <RuleBox icon={ClipboardList} label="Audit Level" value="All" detail="Blocked and successful actions are logged" />
+            <RuleBox icon={Gauge} label="Max Request" value={`${usage?.maxTokensPerRequest?.toLocaleString() || "32,768"}`} detail="Tokens per LLM call" />
+            <RuleBox icon={Activity} label="Daily Budget" value={`${usage?.dailyTokenBudget?.toLocaleString() || "250,000"}`} detail={`${usage?.remainingTokensToday?.toLocaleString() || "n/a"} remaining today`} />
+          </div>
+
+          <div className="mt-5 border-t border-[#4a2b08] pt-4">
+            <div className="mb-2 flex items-center justify-between text-xs">
+              <span className="mono uppercase text-[#9b8460]">Token Budget Used</span>
+              <span className="mono text-[#ffd8b0]">{budgetPercent}%</span>
+            </div>
+            <div className="h-2 border border-[#4a2b08] bg-[#120800]">
+              <div className="h-full bg-[#ffac02]" style={{ width: `${budgetPercent}%` }} />
             </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => addToast("info", "Edit policy")} className="btn btn-secondary text-xs">Edit</button>
-            <button onClick={() => addToast("success", "Policy duplicated")} className="btn btn-secondary text-xs">Duplicate</button>
+        </section>
+
+        <section className="card">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold">Approval Queue</h3>
+              <p className="mt-1 text-xs text-[#9b8460]">
+                Requests are created by the runtime and security layer when work crosses policy boundaries.
+              </p>
+            </div>
+            <span className="badge badge-warning text-[10px]">{pending.length} Pending</span>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <RuleBox icon="🌐" label="External API Calls" value="Blocked" detail="All LLM calls use local vLLM/Ollama" negative />
-          <RuleBox icon="🔍" label="PII Scrubbing" value="Enabled" detail="Scrubs: email, phone, SSN, credit card, API keys, AWS keys" positive />
-          <RuleBox icon="✋" label="Approval Required" value="Yes" detail="For: deploy, financial, external_api_call" />
-          <RuleBox icon="📋" label="Audit Level" value="All" detail="Every action is logged immutably" />
-          <RuleBox icon="🔢" label="Max Tokens" value="32,768" detail="Per request limit" />
-          <RuleBox icon="⏱" label="Heartbeat Interval" value="300s" detail="5 minutes default" />
-        </div>
-
-        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#4a2b08]">
-          <div className="text-xs text-[#9b8460]">Applied to all agents by default</div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-xs text-[#d8c19d]">Override per-agent</span>
-            <Toggle />
-          </label>
-        </div>
+          <div className="space-y-3">
+            {approvals.length === 0 ? (
+              <div className="border border-dashed border-[#4a2b08] px-4 py-10 text-center text-sm text-[#9b8460]">
+                No approval requests have been created yet.
+              </div>
+            ) : (
+              approvals.map((approval) => (
+                <ApprovalRow
+                  key={approval.id}
+                  approval={approval}
+                  busy={busy.startsWith(approval.id)}
+                  onApprove={() => void decide(approval, "approved")}
+                  onReject={() => void decide(approval, "rejected")}
+                />
+              ))
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* PII Patterns */}
-      <div className="card">
-        <h3 className="font-semibold text-lg mb-4">PII Detection Patterns</h3>
-        <div className="space-y-2">
+      <section className="card">
+        <h3 className="mb-4 text-lg font-semibold">PII Detection Patterns</h3>
+        <div className="grid gap-2 lg:grid-cols-2">
           {[
             { name: "Email", pattern: "[a-zA-Z0-9._%+-]+@[...]", strategy: "Mask", active: true },
             { name: "Phone (US)", pattern: "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b", strategy: "Mask", active: true },
@@ -71,51 +193,94 @@ export default function PoliciesPage() {
             { name: "Credit Card", pattern: "\\b(?:\\d{4}[ -]?){3}\\d{4}\\b", strategy: "Redact", active: true },
             { name: "API Keys", pattern: "(?:api_key|secret|token)...", strategy: "Redact", active: true },
             { name: "AWS Keys", pattern: "AKIA[0-9A-Z]{16}", strategy: "Redact", active: true },
-            { name: "JWT Tokens", pattern: "eyJ...", strategy: "Redact", active: true },
-            { name: "IP Addresses", pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", strategy: "Mask", active: false },
-          ].map((p) => (
-            <div key={p.name} className="flex items-center justify-between p-3 rounded-none border border-[#4a2b08] hover:border-[#4a2b08] transition-all">
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${p.active ? "bg-[#9dffb5]" : "bg-[#9b8460]"}`} />
-                <div>
-                  <div className="font-medium text-sm">{p.name}</div>
-                  <div className="text-[10px] text-[#9b8460] font-mono mt-0.5">{p.pattern}</div>
-                </div>
+          ].map((pattern) => (
+            <div key={pattern.name} className="panel flex items-center justify-between gap-3 p-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{pattern.name}</div>
+                <div className="mono mt-1 truncate text-[10px] text-[#9b8460]">{pattern.pattern}</div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`badge text-[10px] ${p.strategy === "Redact" ? "badge-danger" : "badge-warning"}`}>
-                  {p.strategy}
-                </span>
-                <Toggle active={p.active} />
-              </div>
+              <span className={`badge shrink-0 text-[10px] ${pattern.strategy === "Redact" ? "badge-danger" : "badge-warning"}`}>
+                {pattern.strategy}
+              </span>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-function RuleBox({ icon, label, value, detail, positive, negative }: {
-  icon: string; label: string; value: string; detail: string; positive?: boolean; negative?: boolean;
+function ApprovalRow({
+  approval,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  approval: Approval;
+  busy: boolean;
+  onApprove: () => void;
+  onReject: () => void;
 }) {
-  const valColor = positive ? "text-[#9dffb5]" : negative ? "text-[#ff8a61]" : "";
+  const reasons = approval.details?.reasons as string[] | undefined;
   return (
-    <div className="p-3 rounded-none bg-[#170d02] border border-[#4a2b08]">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs">{icon}</span>
+    <div className="panel p-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mono text-[10px] uppercase text-[#ffac02]">{approval.actionType}</div>
+          <h4 className="mt-1 text-sm font-semibold">{approval.target || approval.id}</h4>
+        </div>
+        <span className={`badge text-[10px] ${approval.status === "approved" ? "badge-success" : approval.status === "rejected" ? "badge-danger" : "badge-warning"}`}>
+          {approval.status}
+        </span>
+      </div>
+      <p className="line-clamp-3 text-xs text-[#d8c19d]">
+        {approval.details?.messagePreview || approval.details?.reason || reasons?.join("; ") || "Approval requested by runtime policy."}
+      </p>
+      {reasons?.length ? (
+        <div className="mono mt-3 text-[10px] uppercase text-[#9b8460]">
+          {reasons.join(" / ")}
+        </div>
+      ) : null}
+      {approval.status === "pending" ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={onApprove} disabled={busy} className="btn btn-primary px-3 py-1.5 text-[11px]">
+            <Check size={12} />
+            Approve
+          </button>
+          <button onClick={onReject} disabled={busy} className="btn btn-secondary px-3 py-1.5 text-[11px]">
+            <X size={12} />
+            Reject
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RuleBox({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  positive,
+  negative,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  positive?: boolean;
+  negative?: boolean;
+}) {
+  const valueColor = positive ? "text-[#9dffb5]" : negative ? "text-[#ff8a61]" : "text-[#fff7e8]";
+  return (
+    <div className="panel p-3">
+      <div className="mb-1 flex items-center gap-2">
+        <Icon size={13} className="text-[#ffac02]" />
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <div className={`font-bold text-sm ${valColor}`}>{value}</div>
-      <div className="text-[10px] text-[#9b8460] mt-0.5">{detail}</div>
-    </div>
-  );
-}
-
-function Toggle({ active = false }: { active?: boolean }) {
-  return (
-    <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${active ? "bg-[#ffac02]" : "bg-[#4a2b08]"}`}>
-      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${active ? "translate-x-4" : "translate-x-0"}`} />
+      <div className={`text-sm font-bold ${valueColor}`}>{value}</div>
+      <div className="mt-0.5 text-[10px] text-[#9b8460]">{detail}</div>
     </div>
   );
 }

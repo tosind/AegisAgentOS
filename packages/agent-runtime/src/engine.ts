@@ -4,10 +4,12 @@
 import type { LLMRequest, LLMResponse } from "@enterprise/shared";
 import { MemorySystem } from "./memory.js";
 import { SkillEngine } from "./skills.js";
-import { ToolRegistry } from "./tools.js";
+import { ApprovalRequiredError, ToolRegistry } from "./tools.js";
 
 const SECURITY_LAYER_URL =
   process.env.SECURITY_LAYER_URL || "http://localhost:8423";
+const SECURITY_LAYER_API_KEY =
+  process.env.SECURITY_LAYER_API_KEY || "esk_dev_security_layer_key";
 const VLLM_URL = process.env.VLLM_URL || "http://localhost:8000/v1";
 
 const SYSTEM_PROMPT = `You are an enterprise AI agent. You help employees complete tasks efficiently and securely.
@@ -134,7 +136,7 @@ export class AgentEngine {
     messages.push({ role: "user", content: prompt });
 
     // Get available tools
-    const availableTools = await this.tools.listTools(tenantId);
+    const availableTools = await this.tools.listTools(tenantId, agentId);
     const toolDefs = availableTools.map((t) => ({
       name: t.name,
       description: t.description,
@@ -199,6 +201,7 @@ export class AgentEngine {
           });
           const result = await this.tools.executeTool(
             tenantId,
+            agentId,
             toolCall.name,
             toolCall.arguments,
           );
@@ -219,12 +222,22 @@ export class AgentEngine {
             name: toolCall.name,
             result: `Error: ${err.message}`,
           });
-          await onEvent?.({
-            eventType: "tool_call_failed",
-            title: `Tool failed: ${toolCall.name}`,
-            message: err.message,
-            payload: { arguments: toolCall.arguments },
-          });
+          if (err instanceof ApprovalRequiredError) {
+            await onEvent?.({
+              eventType: "tool_approval_required",
+              title: `Approval required: ${toolCall.name}`,
+              message: err.message,
+              payload: { arguments: toolCall.arguments, approvalId: err.approvalId },
+            });
+            throw err;
+          } else {
+            await onEvent?.({
+              eventType: "tool_call_failed",
+              title: `Tool failed: ${toolCall.name}`,
+              message: err.message,
+              payload: { arguments: toolCall.arguments },
+            });
+          }
         }
       }
 
@@ -290,7 +303,10 @@ export class AgentEngine {
   ): Promise<LLMResponse> {
     const response = await fetch(`${SECURITY_LAYER_URL}/v1/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SECURITY_LAYER_API_KEY}`,
+      },
       body: JSON.stringify({
         messages,
         agentId,

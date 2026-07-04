@@ -22,6 +22,8 @@ Task work lives in `agent_tasks`. A task can be queued as a Kanban card, moved a
 
 Observable execution events live in `agent_task_events`. The runtime appends state transitions, model call metadata, tool call metadata, memory writes, and completion/failure events. This is an audit-friendly activity trace, not hidden model chain-of-thought.
 
+Approval gates live in `approval_requests`. The security layer creates requests for approval-required LLM calls, and the runtime creates requests for high-risk tools. Approved requests allow the matching work item to be retried.
+
 ## Register an Agent
 
 1. Create the agent in Paperclip.
@@ -94,7 +96,7 @@ curl -X POST http://localhost:8421/execute \
   }'
 ```
 
-The runtime routes the task through the security layer, checks policy, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, appends execution events to `agent_task_events`, writes the task result to `agent_tasks`, and stores memory when enabled.
+The runtime routes the task through the security layer, checks policy, enforces token budgets, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, appends execution events to `agent_task_events`, writes the task result to `agent_tasks`, and stores memory when enabled.
 
 ## Queue and Run Board Tasks
 
@@ -131,6 +133,17 @@ Read its execution trace:
 curl http://localhost:8421/tasks/<task-row-id>/events
 ```
 
+If execution creates an approval request, approve it from the dashboard Policies page or directly through the security layer:
+
+```bash
+curl -X PATCH http://localhost:8423/approvals/<approval-id> \
+  -H "Authorization: Bearer $DASHBOARD_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"approved"}'
+```
+
+Then rerun the blocked card.
+
 To use Ollama, make sure the model exists:
 
 ```bash
@@ -155,6 +168,8 @@ Use conservative defaults for new agents:
   "allowedExternalModels": [],
   "scrubPII": true,
   "piiPatterns": ["email", "phone", "ssn", "credit_card", "api_key"],
+  "maxTokensPerRequest": 32768,
+  "dailyTokenBudget": 250000,
   "requireApprovalFor": ["deploy", "financial", "external_api_call"],
   "auditLevel": "all"
 }
@@ -182,5 +197,7 @@ Before enabling an agent for real users:
 - Confirm its allowed MCP tools are minimal.
 - Run a harmless task and inspect `audit_logs`.
 - Inspect the task's `agent_task_events` trace for expected model/tool/memory activity.
+- Confirm approval-required prompts and high-risk tools create `approval_requests` instead of executing.
+- Confirm token usage is under `dailyTokenBudget`.
 - Confirm PII is scrubbed before any external API route.
 - Confirm memory is written to `agent_memory` only for the expected tenant.

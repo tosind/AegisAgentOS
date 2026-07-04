@@ -40,6 +40,7 @@ export const SecurityPolicySchema = z.object({
     scrubPII: z.boolean().default(true),
     piiPatterns: z.array(z.string()).default(["email", "phone", "ssn"]),
     maxTokensPerRequest: z.number().default(32768),
+    dailyTokenBudget: z.number().default(250000),
     requireApprovalFor: z.array(z.string()).default([]),
     auditLevel: z.enum(["none", "errors", "all"]).default("all"),
   }),

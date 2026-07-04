@@ -165,12 +165,26 @@ The live flow is:
 4. Run a card. The dashboard posts to `/api/tasks/:id/run`, which calls the runtime `/tasks/:id/run` endpoint.
 5. The runtime marks the existing task `running`, assigns the selected agent, and starts appending observable trace rows to `agent_task_events`.
 6. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
-7. The runtime writes output, token count, duration, tool calls, and the final board status back to `agent_tasks`.
-8. Successful runs store task memory in `agent_memory`.
+7. If the prompt requires approval, the security layer creates an `approval_requests` row and blocks the run until it is approved.
+8. The security layer checks `maxTokensPerRequest` and `dailyTokenBudget` before routing the request.
+9. The runtime writes output, token count, duration, tool calls, and the final board status back to `agent_tasks`.
+10. Successful runs store task memory in `agent_memory`.
 
 For one-off execution, the dashboard `Run Task` form still posts through `/api/tasks` to the runtime `/execute` endpoint. That path creates and runs a task immediately instead of first placing it on the Kanban board.
 
 The trace view records state transitions such as task creation, context preparation, memory/skill loading, model calls, tool calls, memory writes, success, and failure. It does not expose hidden model chain-of-thought.
+
+## Governance Console
+
+Open `http://localhost:3000/policies` to inspect live policy posture:
+
+- pending, approved, and rejected `approval_requests`
+- approve/reject controls for dashboard admins and agent managers
+- token usage for the current day
+- max tokens per request and daily token budget
+- active PII patterns and default approval gates
+
+LLM calls that match approval-triggering classifications are blocked until the matching approval is approved. High-risk tools such as shell commands, file writes, web search, deploy/send/update/delete-style tools, and payment/external tools also create approval requests before execution.
 
 If a model is not installed, the task fails and the failure is preserved in `agent_tasks`; the UI should show that error instead of pretending the agent ran.
 
@@ -211,6 +225,7 @@ For managed databases, use provider snapshots plus periodic logical dumps.
 - Use `AEGIS_DATABASE_URL` and `PAPERCLIP_DATABASE_URL` values with TLS.
 - Run `docker/init-db.sql` once against the Aegis database.
 - Pull the model named by `OLLAMA_MODEL`, or point vLLM at the model named by `VLLM_MODEL`.
+- Set service API keys for runtime, security layer, dashboard, MCP hub, and Paperclip; the security layer enforces service auth on LLM, approval, and usage endpoints.
 - Enable backups and test restore into a staging database.
 - Restrict service ports to the private network.
 - Replace placeholder credential storage with KMS, Vault, or your provider secret store.

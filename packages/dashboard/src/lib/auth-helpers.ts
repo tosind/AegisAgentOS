@@ -53,6 +53,24 @@ export function createSessionToken(user: Omit<UserSession, "exp">): string {
   return `${header}.${body}.${signature}`;
 }
 
+export function verifySessionToken(token: string): UserSession | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [header, body, signature] = parts;
+    const expected = createHmac("sha256", JWT_SECRET)
+      .update(`${header}.${body}`)
+      .digest("base64url");
+    if (signature !== expected) return null;
+
+    const session = JSON.parse(Buffer.from(body, "base64url").toString()) as UserSession;
+    if (session.exp < Math.floor(Date.now() / 1000)) return null;
+    return session;
+  } catch {
+    return null;
+  }
+}
+
 export function verifyPassword(password: string, hash: string): boolean {
   const [salt, key] = hash.split(":");
   if (!salt || !key) return false;

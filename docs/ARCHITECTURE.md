@@ -148,7 +148,7 @@ CREATE TABLE security_policies (
   id UUID PRIMARY KEY,
   tenant_id UUID NOT NULL,
   name TEXT NOT NULL,
-  rules JSONB NOT NULL,       -- {allowExternal: bool, allowedModels: [], scrubPII: bool}
+  rules JSONB NOT NULL,       -- {allowExternalAPI, allowedExternalModels, scrubPII, maxTokensPerRequest, dailyTokenBudget}
   created_at TIMESTAMP,
   updated_at TIMESTAMP
 );
@@ -236,6 +236,21 @@ CREATE TABLE mcp_connections (
   status TEXT DEFAULT 'disconnected',
   created_at TIMESTAMP,
   updated_at TIMESTAMP
+);
+
+-- Approval gates
+CREATE TABLE approval_requests (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL,
+  agent_id UUID NOT NULL,
+  action_type TEXT NOT NULL,  -- 'llm_call', 'tool:run_command', etc.
+  target TEXT,
+  details JSONB,
+  status TEXT,                -- 'pending', 'approved', 'rejected'
+  requested_by UUID,
+  approved_by UUID,
+  approved_at TIMESTAMP,
+  created_at TIMESTAMP
 );
 ```
 

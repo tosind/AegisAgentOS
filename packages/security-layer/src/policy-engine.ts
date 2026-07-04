@@ -142,15 +142,111 @@ export class PolicyEngine {
     agentId: string,
     actionType: string,
     details: Record<string, unknown>,
+    target?: string,
   ): Promise<ApprovalRequest> {
+    if (target) {
+      const existing = await this.findApproval(tenantId, agentId, actionType, target, [
+        "pending",
+        "approved",
+      ]);
+      if (existing) return existing;
+    }
+
     const result = await pool.query(
-      `INSERT INTO approval_requests (tenant_id, agent_id, action_type, details, status)
-       VALUES ($1, $2, $3, $4, 'pending')
+      `INSERT INTO approval_requests (tenant_id, agent_id, action_type, target, details, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending')
        RETURNING *`,
-      [tenantId, agentId, actionType, JSON.stringify(details)],
+      [tenantId, agentId, actionType, target || null, JSON.stringify(details)],
     );
 
     return this.rowToApproval(result.rows[0]);
+  }
+
+  async findApproval(
+    tenantId: string,
+    agentId: string,
+    actionType: string,
+    target: string,
+    statuses: Array<ApprovalRequest["status"]> = ["approved"],
+  ): Promise<ApprovalRequest | null> {
+    const result = await pool.query(
+      `SELECT *
+       FROM approval_requests
+       WHERE tenant_id = $1
+         AND agent_id = $2
+         AND action_type = $3
+         AND target = $4
+         AND status = ANY($5)
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [tenantId, agentId, actionType, target, statuses],
+    );
+
+    return result.rows[0] ? this.rowToApproval(result.rows[0]) : null;
+  }
+
+  async listApprovals(params: {
+    tenantId: string;
+    status?: ApprovalRequest["status"];
+    limit?: number;
+  }): Promise<ApprovalRequest[]> {
+    const values: unknown[] = [params.tenantId];
+    let query = `SELECT * FROM approval_requests WHERE tenant_id = $1`;
+    if (params.status) {
+      values.push(params.status);
+      query += ` AND status = $${values.length}`;
+    }
+    values.push(params.limit || 50);
+    query += ` ORDER BY created_at DESC LIMIT $${values.length}`;
+
+    const result = await pool.query(query, values);
+    return result.rows.map((row) => this.rowToApproval(row));
+  }
+
+  async updateApproval(params: {
+    approvalId: string;
+    status: "approved" | "rejected";
+    actorId?: string;
+  }): Promise<ApprovalRequest | null> {
+    const result = await pool.query(
+      `UPDATE approval_requests
+       SET status = $2,
+           approved_by = $3,
+           approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END
+       WHERE id = $1
+       RETURNING *`,
+      [params.approvalId, params.status, params.actorId || null],
+    );
+
+    return result.rows[0] ? this.rowToApproval(result.rows[0]) : null;
+  }
+
+  async getUsage(tenantId: string): Promise<{
+    tenantId: string;
+    usedTokensToday: number;
+    dailyTokenBudget: number;
+    maxTokensPerRequest: number;
+    remainingTokensToday: number;
+  }> {
+    const policy = await this.getPolicy(tenantId);
+    const usage = await pool.query(
+      `SELECT COALESCE(SUM(tokens_used), 0) AS used_tokens
+       FROM audit_logs
+       WHERE tenant_id = $1
+         AND created_at >= date_trunc('day', NOW())`,
+      [tenantId],
+    );
+    const usedTokensToday = Number(usage.rows[0]?.used_tokens || 0);
+    const dailyTokenBudget = Number((policy.rules as any).dailyTokenBudget || 250000);
+    const maxTokensPerRequest = Number(policy.rules.maxTokensPerRequest || 32768);
+
+    return {
+      tenantId,
+      usedTokensToday,
+      dailyTokenBudget,
+      maxTokensPerRequest,
+      remainingTokensToday: Math.max(0, dailyTokenBudget - usedTokensToday),
+    };
   }
 
   /**

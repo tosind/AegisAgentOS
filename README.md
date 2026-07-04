@@ -6,9 +6,9 @@ Status: alpha internal harness. The workspace builds and tests cleanly, the dash
 
 ## What Is Included
 
-- Next.js admin dashboard for agents, Kanban work management, execution traces, audit logs, policies, integrations, onboarding, and settings
+- Next.js admin dashboard for agents, Kanban work management, execution traces, approval queues, token budgets, audit logs, policies, integrations, onboarding, and settings
 - Agent runtime service with DB-backed agent registry, task ledger, execution events, memory, skills, tool execution, and Paperclip webhook intake
-- Security layer with PII detection, policy evaluation, audit logging, and local-first LLM routing
+- Security layer with PII detection, policy evaluation, approval enforcement, budget checks, audit logging, and local-first LLM routing
 - MCP hub with connector scaffolds for PostgreSQL, Slack, GitHub, REST APIs, SMTP email, and filesystem tools
 - Postgres + pgvector schema for policies, agents, task runs, trace events, audit logs, memory, skills, MCP connections, and approvals
 - Docker Compose stack for dashboard, Paperclip, Postgres, Ollama, vLLM, runtime, security layer, MCP hub, and nginx
@@ -83,6 +83,8 @@ The Agents page is a live harness when the runtime is online:
 - observable execution events are persisted in `agent_task_events`
 - successful runs write memory to `agent_memory`
 - LLM calls write audit rows through the security layer
+- approval-gated prompts and high-risk tool calls create `approval_requests`
+- token usage is checked against `maxTokensPerRequest` and `dailyTokenBudget`
 
 The trace view intentionally records observable execution metadata, model summaries, tool calls, and state transitions. It does not expose hidden model chain-of-thought.
 
@@ -91,10 +93,10 @@ The trace view intentionally records observable execution metadata, model summar
 Aegis is not enterprise-ready yet. The current repo is a functional pre-production harness for building toward Hermes/OpenClaw/Paperclip-style internal agents. Before using it for production operations, the project still needs:
 
 - hardened authentication and role-based access control across every service route
-- approval queues for write tools, deployments, finance actions, shell execution, and external API calls
+- deeper approval workflows for delegated reviewers, expiry windows, and one-time approval consumption
 - first-class Paperclip and Hermes/OpenClaw adapters instead of only compatible task/runtime primitives
 - streaming execution traces and resumable multi-agent sessions
-- budgets, quotas, tenant isolation tests, and stronger policy enforcement around MCP tools
+- richer budgets, quotas, tenant isolation tests, and stronger policy enforcement around MCP tools
 - production secret storage, backup/restore drills, audit retention, and observability dashboards
 
 ## Deployment Docs
@@ -109,7 +111,7 @@ This repo is not production-hardened yet. Before deploying beyond local developm
 - Change every secret in `.env`
 - Replace placeholder connector secret encoding with a real KMS or vault
 - Put authentication in front of all service endpoints
-- Enforce approval gates before write tools and shell execution
+- Review approval gates before enabling write tools and shell execution
 - Restrict filesystem and command tools per tenant/agent policy
 - Review `npm audit` output and dependency upgrades
 - Add TLS and network policy around exposed ports
