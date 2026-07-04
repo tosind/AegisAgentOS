@@ -1,4 +1,4 @@
-# Enterprise Agent OS — Deployment Guide
+# Aegis Agent OS — Deployment Guide
 
 ## Quick Start
 

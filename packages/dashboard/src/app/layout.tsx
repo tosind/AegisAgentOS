@@ -4,9 +4,9 @@ import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Enterprise Agent OS",
+  title: "Aegis Agent OS",
   description:
-    "Self-hosted AI agent platform — internal agents, zero data leakage, 24/7 enterprise workforce",
+    "Self-hosted enterprise agent command center with Paperclip orchestration, local LLM routing, and audit-first governance",
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen flex bg-[#0a0a0f] text-[#f8f9fa] antialiased">
         <ToastProvider>
           <Sidebar />
-          <main className="flex-1 ml-64">{children}</main>
+          <main className="flex-1 ml-72">{children}</main>
         </ToastProvider>
       </body>
     </html>

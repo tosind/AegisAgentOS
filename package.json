@@ -1,8 +1,8 @@
 {
-  "name": "enterprise-agent-os",
+  "name": "aegis-agent-os",
   "version": "1.0.0",
   "private": true,
-  "description": "Self-hosted AI agent platform for enterprises — combining Paperclip orchestration, Hermes-style agents, and Downy-inspired security",
+  "description": "Aegis Agent OS — self-hosted enterprise AI agents with Paperclip orchestration, Hermes-style operations, local LLM routing, and audit-first governance",
   "workspaces": [
     "packages/shared",
     "packages/agent-runtime",

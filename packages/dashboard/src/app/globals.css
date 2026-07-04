@@ -3,16 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #f8f9fa;
-  --card: #14141f;
-  --card-foreground: #f8f9fa;
-  --border: #2a2a3a;
-  --muted: #6c757d;
-  --muted-foreground: #adb5bd;
-  --accent: #4c6ef5;
+  --background: #090907;
+  --foreground: #f5f0e4;
+  --card: #14120d;
+  --card-foreground: #f5f0e4;
+  --panel: #191713;
+  --panel-strong: #211d16;
+  --border: #332d20;
+  --border-strong: #5d4b23;
+  --muted: #8a8171;
+  --muted-foreground: #c8bea9;
+  --accent: #e3a21a;
   --accent-foreground: #ffffff;
-  --danger: #f03e3e;
+  --cyan: #4fbcba;
+  --green: #3aa35c;
+  --danger: #e94b27;
+  --violet: #9b7fe8;
+  --shadow: rgba(0, 0, 0, 0.36);
 }
 
 * {
@@ -22,9 +29,25 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 9%, rgba(227, 162, 26, 0.13), transparent 28rem),
+    radial-gradient(circle at 88% 7%, rgba(79, 188, 186, 0.09), transparent 26rem),
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 78%);
+  z-index: -1;
 }
 
 /* Scrollbar */
@@ -41,10 +64,26 @@ body {
 
 /* Card styles */
 .card {
-  background: var(--card);
+  background: linear-gradient(180deg, rgba(33, 29, 22, 0.92), rgba(20, 18, 13, 0.96));
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 1.5rem;
+  box-shadow: 0 18px 44px var(--shadow);
+}
+
+.panel {
+  background: rgba(20, 18, 13, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.hairline {
+  background: linear-gradient(90deg, transparent, rgba(227, 162, 26, 0.6), rgba(79, 188, 186, 0.45), transparent);
+  height: 1px;
+}
+
+.mono {
+  font-family: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
 }
 
 /* Status badges */
@@ -52,27 +91,32 @@ body {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
+  border: 1px solid transparent;
 }
 .badge-success {
-  background: rgba(64, 192, 87, 0.15);
-  color: #40c057;
+  background: rgba(58, 163, 92, 0.14);
+  color: #77d28d;
+  border-color: rgba(58, 163, 92, 0.28);
 }
 .badge-warning {
-  background: rgba(250, 176, 5, 0.15);
-  color: #fab005;
+  background: rgba(227, 162, 26, 0.15);
+  color: #f2c566;
+  border-color: rgba(227, 162, 26, 0.32);
 }
 .badge-danger {
-  background: rgba(240, 62, 62, 0.15);
-  color: #f03e3e;
+  background: rgba(233, 75, 39, 0.15);
+  color: #ff8b6b;
+  border-color: rgba(233, 75, 39, 0.32);
 }
 .badge-info {
-  background: rgba(76, 110, 245, 0.15);
-  color: #4c6ef5;
+  background: rgba(79, 188, 186, 0.14);
+  color: #86d9d8;
+  border-color: rgba(79, 188, 186, 0.3);
 }
 
 /* Button styles */
@@ -81,7 +125,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 7px;
   font-size: 0.875rem;
   font-weight: 500;
   border: none;
@@ -90,23 +134,25 @@ body {
 }
 .btn-primary {
   background: var(--accent);
-  color: var(--accent-foreground);
+  color: #160f02;
+  box-shadow: 0 10px 24px rgba(227, 162, 26, 0.2);
 }
 .btn-primary:hover {
-  background: #3b5bdb;
+  background: #f2b72d;
 }
 .btn-secondary {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   color: var(--foreground);
   border: 1px solid var(--border);
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-strong);
+  background: rgba(227, 162, 26, 0.07);
 }
 .btn-danger {
   background: var(--danger);
   color: white;
 }
 .btn-danger:hover {
-  background: #c92a2a;
+  background: #c93a1e;
 }

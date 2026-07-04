@@ -1,6 +1,6 @@
-# Enterprise Agent OS
+# Aegis Agent OS
 
-Enterprise Agent OS is a self-hosted AI agent platform that combines a Hermes-style operations dashboard with a Paperclip orchestration backbone, local-first LLM routing, PII scrubbing, audit logs, and MCP-based enterprise integrations.
+Aegis Agent OS is a self-hosted AI agent platform that combines a Hermes-style operations dashboard with a Paperclip orchestration backbone, local-first LLM routing, PII scrubbing, audit logs, and MCP-based enterprise integrations.
 
 Status: alpha. The workspace now builds and tests cleanly, the dashboard can run from demo data or live local services, and Docker Compose defines the intended full stack. It is ready for a public repo as an early platform foundation, not as a hardened production release.
 

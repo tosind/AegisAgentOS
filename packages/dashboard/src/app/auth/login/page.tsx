@@ -42,14 +42,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+    <div className="min-h-screen flex items-center justify-center bg-[#090907] px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
-            <span className="text-[#4c6ef5]">Enterprise</span> Agent OS
+            <span className="text-[#e3a21a]">Aegis</span> Agent OS
           </h1>
-          <p className="text-[#6c757d] text-sm mt-2">
-            Sign in to manage your AI workforce
+          <p className="text-[#8a8171] text-sm mt-2">
+            Sign in to the enterprise agent command center
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#0d0d16] border border-[#2a2a3a] rounded-lg px-3 py-2.5 text-sm focus:border-[#4c6ef5] focus:outline-none"
+                className="w-full bg-[#090907] border border-[#332d20] rounded-lg px-3 py-2.5 text-sm focus:border-[#e3a21a] focus:outline-none"
                 placeholder="admin@enterprise.local"
                 required
               />
@@ -79,7 +79,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#0d0d16] border border-[#2a2a3a] rounded-lg px-3 py-2.5 text-sm focus:border-[#4c6ef5] focus:outline-none"
+                className="w-full bg-[#090907] border border-[#332d20] rounded-lg px-3 py-2.5 text-sm focus:border-[#e3a21a] focus:outline-none"
                 placeholder="Enter your password"
                 required
               />
@@ -94,8 +94,8 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[#2a2a3a]">
-            <p className="text-xs text-[#6c757d] text-center">
+          <div className="mt-6 pt-6 border-t border-[#332d20]">
+            <p className="text-xs text-[#8a8171] text-center">
               Default local admin: admin@enterprise.local / change-me-now
             </p>
 
@@ -115,11 +115,11 @@ function OIDCButton({ provider }: { provider: string }) {
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[#2a2a3a] text-sm hover:bg-white/[0.02] transition-colors"
+      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[#332d20] text-sm hover:bg-white/[0.02] transition-colors"
       disabled
     >
       Continue with {provider}
-      <span className="text-[10px] text-[#6c757d] font-mono">(SSO)</span>
+      <span className="text-[10px] text-[#8a8171] mono">(SSO)</span>
     </button>
   );
 }

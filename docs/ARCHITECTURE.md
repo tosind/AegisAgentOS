@@ -1,8 +1,8 @@
-# Enterprise Agent OS — Architecture
+# Aegis Agent OS — Architecture
 
 ## Overview
 
-Enterprise Agent OS is a self-hosted platform that provides enterprises with
+Aegis Agent OS is a self-hosted platform that provides enterprises with
 24/7 AI agents that integrate with internal systems while maintaining strict
 data security. It combines the best ideas from:
 

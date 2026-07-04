@@ -1,4 +1,4 @@
-// ── Dashboard Auth API — Login ────────────────────────────────
+// ── Aegis Dashboard Auth API — Login ──────────────────────────
 
 import { NextResponse } from "next/server";
 import { createSessionToken, verifyPassword } from "@/lib/auth-helpers";
