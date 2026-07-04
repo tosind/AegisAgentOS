@@ -124,6 +124,7 @@ This repo is not production-hardened yet. Before deploying beyond local developm
 npm run typecheck
 npm test
 npm run build
+npm run db:migrate
 npm run docker:up
 npm run docker:up:gpu
 npm run docker:logs
@@ -139,5 +140,7 @@ packages/security-layer  PII scrubber, policy engine, LLM router, audit API
 packages/mcp-hub         Enterprise connector hub
 packages/shared          Shared schemas, types, and auth helpers
 docker/                  Compose, nginx, and database initialization
+docker/migrations        Versioned SQL migrations for managed databases
 docs/                    Architecture and deployment notes
+.github/workflows        CI checks for typecheck, test, and build
 ```

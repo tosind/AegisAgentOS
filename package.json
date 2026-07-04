@@ -21,6 +21,7 @@
     "docker:down": "docker compose -f docker/docker-compose.yml down",
     "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
     "docker:build": "docker compose -f docker/docker-compose.yml build",
-    "db:init": "docker compose -f docker/docker-compose.yml exec postgres psql -U enterprise -d enterprise_agents -f /docker-entrypoint-initdb.d/init-db.sql"
+    "db:init": "docker compose -f docker/docker-compose.yml exec postgres psql -U enterprise -d enterprise_agents -f /docker-entrypoint-initdb.d/init-db.sql",
+    "db:migrate": "node scripts/migrate-db.mjs"
   }
 }

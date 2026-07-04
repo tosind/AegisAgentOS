@@ -106,13 +106,14 @@ AEGIS_DATABASE_URL=postgresql://aegis_user:strong-password@db.example.com:5432/e
 PAPERCLIP_DATABASE_URL=postgresql://paperclip_user:strong-password@db.example.com:5432/paperclip?sslmode=require
 ```
 
-Then initialize the Aegis schema:
+Then initialize or upgrade the Aegis schema with versioned migrations:
 
 ```bash
-psql "$AEGIS_DATABASE_URL" -f docker/init-db.sql
+AEGIS_DATABASE_URL=postgresql://aegis_user:strong-password@db.example.com:5432/enterprise_agents?sslmode=require \
+npm run db:migrate
 ```
 
-If your managed provider does not allow `CREATE DATABASE`, remove the first Paperclip database creation block from `docker/init-db.sql` before running it. Keep the table, index, `uuid-ossp`, and `vector` setup for the Aegis database.
+`docker/init-db.sql` is still mounted into the bundled Docker Postgres container for first boot. Managed databases should use `docker/migrations` through `npm run db:migrate` because the migration files avoid Docker-specific database creation and record applied versions in `schema_migrations`.
 
 Start the services after the schema exists:
 
@@ -208,7 +209,7 @@ LLM calls that match approval-triggering classifications are blocked until the m
 
 If a model is not installed, the task fails and the failure is preserved in `agent_tasks`; the UI should show that error instead of pretending the agent ran.
 
-For an existing database created before the Kanban and trace schema existed, apply the latest `docker/init-db.sql` or add the `agent_tasks` columns and `agent_task_events` table from that file.
+For an existing database, run `npm run db:migrate`. The migration runner applies unapplied files from `docker/migrations` inside a transaction and records them in `schema_migrations`.
 
 ## Reverse Proxy
 
@@ -243,7 +244,7 @@ For managed databases, use provider snapshots plus periodic logical dumps.
 
 - Change `DB_PASSWORD`, `DASHBOARD_ADMIN_PASSWORD`, `JWT_SECRET`, all service API keys, and all Paperclip secrets.
 - Use `AEGIS_DATABASE_URL` and `PAPERCLIP_DATABASE_URL` values with TLS.
-- Run `docker/init-db.sql` once against the Aegis database.
+- Run `npm run db:migrate` against the Aegis database, or let Docker Compose initialize a fresh local database from `docker/init-db.sql`.
 - Pull the model named by `OLLAMA_MODEL`, or point vLLM at the model named by `VLLM_MODEL`.
 - Set service API keys for runtime, security layer, dashboard, MCP hub, and Paperclip; the security layer enforces service auth on LLM, approval, and usage endpoints.
 - Enable backups and test restore into a staging database.
@@ -251,6 +252,7 @@ For managed databases, use provider snapshots plus periodic logical dumps.
 - Replace placeholder credential storage with KMS, Vault, or your provider secret store.
 - Review policy defaults before allowing write tools or shell/filesystem connectors.
 - Run `npm run test`, `npm run typecheck`, `npm run build`, and `npm run smoke:dashboard`.
+- GitHub Actions runs `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on pushes and pull requests to `main`.
 - Review `npm audit --omit=dev` before each release.
 
 ## Troubleshooting
@@ -268,4 +270,4 @@ Paperclip build fails:
 Set `PAPERCLIP_CONTEXT` to a valid local Paperclip checkout that contains a Dockerfile.
 
 Managed database initialization fails on `CREATE DATABASE`:
-Run `docker/init-db.sql` after removing the first block that creates the `paperclip` database. Managed providers commonly require databases to be created from their console.
+Use `npm run db:migrate` for managed databases. Managed providers commonly require databases to be created from their console, and the versioned migrations avoid the bundled Docker-only `CREATE DATABASE paperclip` bootstrap block.

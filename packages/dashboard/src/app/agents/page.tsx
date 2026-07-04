@@ -61,6 +61,7 @@ export default function AgentsPage() {
   const [lastRun, setLastRun] = useState<AgentTaskSummary | null>(null);
   const [inspector, setInspector] = useState<InspectorState | null>(null);
   const [trace, setTrace] = useState<TraceState | null>(null);
+  const [traceStreaming, setTraceStreaming] = useState(false);
   const [boardBusy, setBoardBusy] = useState("");
   const [sessionBusy, setSessionBusy] = useState(false);
 
@@ -84,6 +85,38 @@ export default function AgentsPage() {
     () => data.sessions.find((session) => session.id === selectedSessionId) || data.sessions[0],
     [data.sessions, selectedSessionId],
   );
+
+  useEffect(() => {
+    if (!trace) {
+      setTraceStreaming(false);
+      return;
+    }
+
+    const lastSequence = trace.events.reduce((max, event) => Math.max(max, event.sequence), 0);
+    const source = new EventSource(`/api/tasks/${trace.task.id}/events/stream?after=${lastSequence}`);
+    setTraceStreaming(true);
+
+    source.addEventListener("trace", (message) => {
+      const event = JSON.parse((message as MessageEvent).data) as AgentTaskEvent;
+      setTrace((current) => {
+        if (!current || current.task.id !== trace.task.id) return current;
+        if (current.events.some((item) => item.id === event.id)) return current;
+        return {
+          ...current,
+          events: [...current.events, event].sort((a, b) => a.sequence - b.sequence),
+        };
+      });
+    });
+    source.onerror = () => {
+      setTraceStreaming(false);
+      source.close();
+    };
+
+    return () => {
+      setTraceStreaming(false);
+      source.close();
+    };
+  }, [trace?.task.id]);
 
   const active = data.agents.filter((agent) => agent.status === "active").length;
   const idle = data.agents.filter((agent) => agent.status === "idle").length;
@@ -616,6 +649,9 @@ export default function AgentsPage() {
               </div>
               <p className="text-xs text-[#9b8460]">{trace.task.title}</p>
             </div>
+            <span className={`badge text-[10px] ${traceStreaming ? "badge-success" : "badge-warning"}`}>
+              {traceStreaming ? "Live Stream" : "Snapshot"}
+            </span>
             <button onClick={() => setTrace(null)} className="btn btn-secondary text-xs">
               Close
             </button>
