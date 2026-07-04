@@ -11,7 +11,7 @@ export function Toggle({
     <div
       onClick={() => onChange?.(!active)}
       className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${
-        active ? "bg-[#4c6ef5]" : "bg-[#2a2a3a]"
+        active ? "bg-[#ffac02]" : "bg-[#4a2b08]"
       }`}
       role="switch"
       aria-checked={active}

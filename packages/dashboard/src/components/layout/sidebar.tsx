@@ -40,69 +40,69 @@ export function Sidebar() {
 
   return (
     <>
-    <div className="fixed inset-x-0 top-0 z-50 max-w-full overflow-hidden border-b border-[#332d20] bg-[#0c0b08]/96 backdrop-blur lg:hidden">
-      <div className="px-4 py-3">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e3a21a] text-xs font-black text-[#160f02] shadow-[0_0_28px_rgba(227,162,26,0.18)]">
-            AG
-          </span>
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-bold">
-              <span className="text-[#e3a21a]">Aegis</span> Agent OS
-            </h1>
-            <p className="truncate text-[11px] font-medium text-[#8a8171]">
-              Enterprise command center
-            </p>
-          </div>
-        </Link>
+      <div className="fixed inset-x-0 top-0 z-50 max-w-full overflow-hidden border-b border-[#4a2b08] bg-[#170d02]/96 backdrop-blur lg:hidden">
+        <div className="px-4 py-3">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="mono flex h-9 w-9 items-center justify-center rounded-none bg-[#ffac02] text-xs font-black text-[#170d02] shadow-[0_0_28px_rgba(255,172,2,0.18)]">
+              AG
+            </span>
+            <div className="min-w-0">
+              <h1 className="display truncate text-sm font-semibold text-[#fff7e8]">
+                <span className="text-[#ffac02]">Aegis</span> Agent OS
+              </h1>
+              <p className="mono truncate text-[10px] uppercase text-[#9b8460]">
+                Enterprise command center
+              </p>
+            </div>
+          </Link>
+        </div>
+        <nav className="flex max-w-full gap-2 overflow-x-auto px-3 pb-3">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`mono flex shrink-0 items-center gap-2 rounded-none border px-3 py-2 text-[11px] font-semibold uppercase transition-all ${
+                  isActive
+                    ? "border-[#ffac02]/30 bg-[#ffac02]/12 text-[#ffd8b0]"
+                    : "border-[#4a2b08] bg-[#1c1004]/72 text-[#d8c19d]"
+                }`}
+              >
+                <Icon size={15} className={isActive ? "text-[#ffac02]" : "text-[#9b8460]"} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-      <nav className="flex max-w-full gap-2 overflow-x-auto px-3 pb-3">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
-                isActive
-                  ? "border-[#e3a21a]/30 bg-[#e3a21a]/12 text-[#f2c566]"
-                  : "border-[#332d20] bg-[#14120d]/72 text-[#c8bea9]"
-              }`}
-            >
-              <Icon size={15} className={isActive ? "text-[#e3a21a]" : "text-[#8a8171]"} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
 
-    <aside className="fixed z-40 hidden h-full w-72 flex-col border-r border-[#332d20] bg-[#0c0b08]/95 backdrop-blur transition-all lg:flex">
+    <aside className="fixed z-40 hidden h-full w-72 flex-col border-r border-[#4a2b08] bg-[#170d02]/95 backdrop-blur transition-all lg:flex">
       {/* Brand */}
-      <div className="p-5 border-b border-[#332d20]">
+      <div className="p-5 border-b border-[#4a2b08]">
         <Link href="/" className="block">
-          <h1 className="text-lg font-bold flex items-center gap-3">
-            <span className="w-9 h-9 rounded-lg bg-[#e3a21a] text-[#160f02] flex items-center justify-center text-xs font-black shadow-[0_0_28px_rgba(227,162,26,0.18)]">
+          <h1 className="display flex items-center gap-3 text-sm font-semibold text-[#fff7e8]">
+            <span className="mono flex h-9 w-9 items-center justify-center rounded-none bg-[#ffac02] text-xs font-black text-[#170d02] shadow-[0_0_28px_rgba(255,172,2,0.18)]">
               AG
             </span>
             <span>
-              <span className="text-[#e3a21a]">Aegis</span> Agent OS
+              <span className="text-[#ffac02]">Aegis</span> Agent OS
             </span>
           </h1>
         </Link>
-        <p className="text-[11px] text-[#8a8171] mt-2 font-medium">
+        <p className="mono mt-2 text-[10px] uppercase text-[#9b8460]">
           Paperclip-native enterprise command center
         </p>
       </div>
 
-      <div className="px-4 py-4 border-b border-[#332d20]">
+      <div className="px-4 py-4 border-b border-[#4a2b08]">
         <div className="panel p-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[#c8bea9] flex items-center gap-2">
-              <Gauge size={14} className="text-[#4fbcba]" />
+            <span className="mono flex items-center gap-2 text-[11px] uppercase text-[#d8c19d]">
+              <Gauge size={14} className="text-[#ffd8b0]" />
               Runtime posture
             </span>
             <span className="badge badge-warning text-[10px] px-2 py-0.5">Alpha</span>
@@ -110,16 +110,16 @@ export function Sidebar() {
           <div className="hairline my-3" />
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="mono text-sm text-[#f5f0e4]">3</div>
-              <div className="text-[10px] text-[#8a8171]">Svc</div>
+              <div className="mono text-sm text-[#fff7e8]">3</div>
+              <div className="text-[10px] text-[#9b8460]">Svc</div>
             </div>
             <div>
-              <div className="mono text-sm text-[#77d28d]">0</div>
-              <div className="text-[10px] text-[#8a8171]">Leaks</div>
+              <div className="mono text-sm text-[#9dffb5]">0</div>
+              <div className="text-[10px] text-[#9b8460]">Leaks</div>
             </div>
             <div>
-              <div className="mono text-sm text-[#e3a21a]">24/7</div>
-              <div className="text-[10px] text-[#8a8171]">Ops</div>
+              <div className="mono text-sm text-[#ffac02]">24/7</div>
+              <div className="text-[10px] text-[#9b8460]">Ops</div>
             </div>
           </div>
         </div>
@@ -136,16 +136,16 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${
+              className={`mono flex items-center gap-3 rounded-none px-3 py-2.5 text-[11px] font-semibold uppercase transition-all duration-150 group ${
                 isActive
-                  ? "bg-[#e3a21a]/10 text-[#f2c566] border border-[#e3a21a]/25"
-                  : "text-[#c8bea9] hover:bg-[#e3a21a]/[0.06] hover:text-[#f5f0e4] border border-transparent"
+                  ? "bg-[#ffac02]/10 text-[#ffd8b0] border border-[#ffac02]/25"
+                  : "text-[#d8c19d] hover:bg-[#ffac02]/[0.06] hover:text-[#fff7e8] border border-transparent"
               }`}
             >
-              <Icon size={17} className={isActive ? "text-[#e3a21a]" : "text-[#8a8171] group-hover:text-[#e3a21a]"} />
+              <Icon size={17} className={isActive ? "text-[#ffac02]" : "text-[#9b8460] group-hover:text-[#ffac02]"} />
               <span>{item.label}</span>
               {isActive && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#e3a21a]" />
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ffac02]" />
               )}
             </Link>
           );
@@ -153,10 +153,10 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-[#332d20] space-y-3">
+      <div className="p-4 border-t border-[#4a2b08] space-y-3">
         <Link
           href="/onboarding"
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#86d9d8] bg-[#4fbcba]/5 hover:bg-[#4fbcba]/10 transition-colors border border-[#4fbcba]/15"
+          className="flex items-center gap-2 px-3 py-2 rounded-none text-xs font-medium text-[#ffd8b0] bg-[#ffd8b0]/5 hover:bg-[#ffd8b0]/10 transition-colors border border-[#ffd8b0]/15"
         >
           <Rocket size={14} />
           Getting Started
@@ -164,20 +164,20 @@ export function Sidebar() {
 
         {session && (
           <div className="flex items-center gap-3 px-1">
-            <div className="w-8 h-8 rounded-lg bg-[#e3a21a]/15 flex items-center justify-center text-xs font-bold text-[#f2c566]">
+            <div className="w-8 h-8 rounded-none bg-[#ffac02]/15 flex items-center justify-center text-xs font-bold text-[#ffd8b0]">
               {session.name?.[0]?.toUpperCase() || "U"}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium truncate">
                 {session.name || session.email}
               </div>
-              <div className="text-[10px] text-[#8a8171] truncate">
+              <div className="text-[10px] text-[#9b8460] truncate">
                 {session.roles?.join(", ") || "User"}
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="text-[#8a8171] hover:text-[#ff8b6b] transition-colors text-xs"
+              className="text-[#9b8460] hover:text-[#ff8a61] transition-colors text-xs"
               title="Sign Out"
             >
               <LogOut size={14} />
@@ -187,8 +187,8 @@ export function Sidebar() {
       </div>
 
       {/* Version */}
-      <div className="px-5 py-3 border-t border-[#332d20]">
-        <div className="text-[10px] text-[#8a8171] mono">
+      <div className="px-5 py-3 border-t border-[#4a2b08]">
+        <div className="text-[10px] text-[#9b8460] mono">
           v1.0.0-alpha • Build 1
         </div>
       </div>

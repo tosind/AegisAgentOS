@@ -9,7 +9,7 @@ export default function SettingsPage() {
     <div className="p-8 space-y-8 max-w-3xl">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-        <p className="text-[#6c757d] text-sm mt-1">Configure your enterprise agent platform</p>
+        <p className="text-[#9b8460] text-sm mt-1">Configure your enterprise agent platform</p>
       </div>
 
       {/* LLM Configuration */}
@@ -80,7 +80,7 @@ function SettingRow({
       <label className="text-sm flex-1">{label}</label>
       <div className="flex items-center gap-2">
         {type === "select" && options ? (
-          <select defaultValue={value} className="bg-[#0d0d16] border border-[#2a2a3a] rounded-lg px-3 py-1.5 text-sm text-[#adb5bd]">
+          <select defaultValue={value} className="bg-[#170d02] border border-[#4a2b08] rounded-none px-3 py-1.5 text-sm text-[#d8c19d]">
             {options.map((o) => <option key={o}>{o}</option>)}
           </select>
         ) : (
@@ -88,10 +88,10 @@ function SettingRow({
             type={type}
             defaultValue={value}
             placeholder={placeholder}
-            className="bg-[#0d0d16] border border-[#2a2a3a] rounded-lg px-3 py-1.5 text-sm text-[#adb5bd] font-mono w-64"
+            className="bg-[#170d02] border border-[#4a2b08] rounded-none px-3 py-1.5 text-sm text-[#d8c19d] font-mono w-64"
           />
         )}
-        {suffix && <span className="text-xs text-[#6c757d]">{suffix}</span>}
+        {suffix && <span className="text-xs text-[#9b8460]">{suffix}</span>}
       </div>
     </div>
   );
@@ -102,9 +102,9 @@ function SettingToggle({ label, enabled, detail }: { label: string; enabled: boo
     <div className="flex items-center justify-between py-0.5">
       <div>
         <div className="text-sm">{label}</div>
-        <div className="text-[10px] text-[#6c757d] mt-0.5">{detail}</div>
+        <div className="text-[10px] text-[#9b8460] mt-0.5">{detail}</div>
       </div>
-      <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${enabled ? "bg-[#4c6ef5]" : "bg-[#2a2a3a]"}`}>
+      <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${enabled ? "bg-[#ffac02]" : "bg-[#4a2b08]"}`}>
         <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-4" : "translate-x-0"}`} />
       </div>
     </div>

@@ -1,25 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #090907;
-  --foreground: #f5f0e4;
-  --card: #14120d;
-  --card-foreground: #f5f0e4;
-  --panel: #191713;
-  --panel-strong: #211d16;
-  --border: #332d20;
-  --border-strong: #5d4b23;
-  --muted: #8a8171;
-  --muted-foreground: #c8bea9;
-  --accent: #e3a21a;
-  --accent-foreground: #ffffff;
-  --cyan: #4fbcba;
-  --green: #3aa35c;
-  --danger: #e94b27;
-  --violet: #9b7fe8;
-  --shadow: rgba(0, 0, 0, 0.36);
+  --background: #170d02;
+  --background-deep: #0f0701;
+  --foreground: #fff7e8;
+  --card: #1c1004;
+  --card-foreground: #fff7e8;
+  --panel: #221405;
+  --panel-strong: #2b1907;
+  --border: rgba(255, 172, 2, 0.18);
+  --border-strong: rgba(255, 172, 2, 0.38);
+  --muted: rgba(255, 247, 232, 0.48);
+  --muted-foreground: rgba(255, 247, 232, 0.72);
+  --accent: #ffac02;
+  --accent-soft: #ffd8b0;
+  --accent-foreground: #170d02;
+  --cyan: #ffd8b0;
+  --green: #9dffb5;
+  --danger: #c92d0f;
+  --violet: #ffcf7a;
+  --shadow: rgba(0, 0, 0, 0.58);
 }
 
 * {
@@ -29,7 +33,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-family: "Spectral", Georgia, "Times New Roman", serif;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
@@ -41,12 +45,13 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 9%, rgba(227, 162, 26, 0.13), transparent 28rem),
-    radial-gradient(circle at 88% 7%, rgba(79, 188, 186, 0.09), transparent 26rem),
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: auto, auto, 44px 44px, 44px 44px;
-  mask-image: linear-gradient(to bottom, #000 0%, transparent 78%);
+    linear-gradient(180deg, rgba(255, 172, 2, 0.075), transparent 22rem),
+    repeating-conic-gradient(
+      rgba(255, 172, 2, 0.055) 0% 25%,
+      transparent 0% 50%
+    );
+  background-size: auto, 3px 3px;
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.72) 58%, transparent 100%);
   z-index: -1;
 }
 
@@ -59,31 +64,40 @@ body::before {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 /* Card styles */
 .card {
-  background: linear-gradient(180deg, rgba(33, 29, 22, 0.92), rgba(20, 18, 13, 0.96));
+  background: color-mix(in srgb, #ffffff 2%, var(--background));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 1.5rem;
-  box-shadow: 0 18px 44px var(--shadow);
+  box-shadow:
+    inset 1px 1px 0 0 rgba(255, 255, 255, 0.045),
+    inset -1px -1px 0 0 rgba(0, 0, 0, 0.45),
+    0 24px 60px -24px var(--shadow);
 }
 
 .panel {
-  background: rgba(20, 18, 13, 0.72);
+  background: color-mix(in srgb, #000000 16%, var(--background));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .hairline {
-  background: linear-gradient(90deg, transparent, rgba(227, 162, 26, 0.6), rgba(79, 188, 186, 0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 172, 2, 0.68), transparent);
   height: 1px;
 }
 
 .mono {
-  font-family: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+  font-family: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+}
+
+.display {
+  font-family: "Spectral", Georgia, "Times New Roman", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 /* Status badges */
@@ -91,32 +105,33 @@ body::before {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: 0.08em;
   border: 1px solid transparent;
 }
 .badge-success {
-  background: rgba(58, 163, 92, 0.14);
-  color: #77d28d;
-  border-color: rgba(58, 163, 92, 0.28);
+  background: rgba(157, 255, 181, 0.11);
+  color: #9dffb5;
+  border-color: rgba(157, 255, 181, 0.28);
 }
 .badge-warning {
-  background: rgba(227, 162, 26, 0.15);
-  color: #f2c566;
-  border-color: rgba(227, 162, 26, 0.32);
+  background: rgba(255, 172, 2, 0.16);
+  color: #ffac02;
+  border-color: rgba(255, 172, 2, 0.34);
 }
 .badge-danger {
-  background: rgba(233, 75, 39, 0.15);
-  color: #ff8b6b;
-  border-color: rgba(233, 75, 39, 0.32);
+  background: rgba(201, 45, 15, 0.18);
+  color: #ff8a61;
+  border-color: rgba(201, 45, 15, 0.38);
 }
 .badge-info {
-  background: rgba(79, 188, 186, 0.14);
-  color: #86d9d8;
-  border-color: rgba(79, 188, 186, 0.3);
+  background: rgba(255, 216, 176, 0.1);
+  color: #ffd8b0;
+  border-color: rgba(255, 216, 176, 0.28);
 }
 
 /* Button styles */
@@ -125,29 +140,34 @@ body::before {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 7px;
+  border-radius: 0;
   font-size: 0.875rem;
-  font-weight: 500;
-  border: none;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .btn-primary {
   background: var(--accent);
-  color: #160f02;
-  box-shadow: 0 10px 24px rgba(227, 162, 26, 0.2);
+  color: var(--accent-foreground);
+  box-shadow:
+    inset 1px 1px 0 0 rgba(255, 255, 255, 0.52),
+    inset -1px -1px 0 0 rgba(0, 0, 0, 0.5);
 }
 .btn-primary:hover {
-  background: #f2b72d;
+  filter: brightness(1.08);
 }
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.16);
   color: var(--foreground);
   border: 1px solid var(--border);
 }
 .btn-secondary:hover {
   border-color: var(--border-strong);
-  background: rgba(227, 162, 26, 0.07);
+  background: rgba(255, 172, 2, 0.08);
 }
 .btn-danger {
   background: var(--danger);

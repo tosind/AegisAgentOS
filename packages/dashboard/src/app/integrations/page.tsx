@@ -14,9 +14,9 @@ export default function IntegrationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Integrations</h2>
-          <p className="text-[#6c757d] text-sm mt-1">
+          <p className="text-[#9b8460] text-sm mt-1">
             Connect enterprise systems via MCP —{" "}
-            <span className="text-[#40c057] font-medium">
+            <span className="text-[#9dffb5] font-medium">
               {connectedCount} of {availableIntegrations.length} connected
             </span>
           </p>
@@ -47,17 +47,17 @@ export default function IntegrationsPage() {
           {data.connections.map((conn) => (
             <div key={conn.name} className="card flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className={`w-3 h-3 rounded-full ${conn.status === "connected" ? "bg-[#40c057]" : conn.status === "error" ? "bg-[#f03e3e]" : "bg-[#6c757d]"}`}>
-                  {conn.status === "connected" && <div className="w-3 h-3 rounded-full bg-[#40c057] animate-ping opacity-30" />}
+                <div className={`w-3 h-3 rounded-full ${conn.status === "connected" ? "bg-[#9dffb5]" : conn.status === "error" ? "bg-[#ff8a61]" : "bg-[#9b8460]"}`}>
+                  {conn.status === "connected" && <div className="w-3 h-3 rounded-full bg-[#9dffb5] animate-ping opacity-30" />}
                 </div>
                 <div>
                   <div className="font-medium text-sm">{conn.name}</div>
-                  <div className="text-[11px] text-[#6c757d]">{conn.type}</div>
+                  <div className="text-[11px] text-[#9b8460]">{conn.type}</div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-xs text-[#adb5bd]">{conn.tools} tools</span>
-                <span className="text-[10px] text-[#6c757d] font-mono">{conn.lastConnected}</span>
+                <span className="text-xs text-[#d8c19d]">{conn.tools} tools</span>
+                <span className="text-[10px] text-[#9b8460] font-mono">{conn.lastConnected}</span>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => addToast(conn.status === "connected" ? "success" : "error", conn.status === "connected" ? "Connection OK" : "Connection failed")}
@@ -81,16 +81,16 @@ export default function IntegrationsPage() {
             <button
               key={item.name}
               onClick={() => addToast("info", `Connect to ${item.name}`)}
-              className="card flex items-center gap-4 hover:border-[#4c6ef5]/30 hover:bg-[#4c6ef5]/[0.02] transition-all text-left group"
+              className="card flex items-center gap-4 hover:border-[#ffac02]/30 hover:bg-[#ffac02]/[0.02] transition-all text-left group"
             >
-              <span className="w-9 h-9 rounded-lg bg-[#0d0d16] border border-[#2a2a3a] flex items-center justify-center text-[10px] font-bold text-[#4c6ef5] group-hover:scale-105 transition-transform">
+              <span className="w-9 h-9 rounded-none bg-[#170d02] border border-[#4a2b08] flex items-center justify-center text-[10px] font-bold text-[#ffac02] group-hover:scale-105 transition-transform">
                 {item.icon}
               </span>
               <div className="flex-1">
                 <div className="font-medium text-sm">{item.name}</div>
-                <div className="text-[11px] text-[#6c757d] mt-0.5">{item.desc}</div>
+                <div className="text-[11px] text-[#9b8460] mt-0.5">{item.desc}</div>
               </div>
-              <span className="text-[#4c6ef5] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[#ffac02] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                 Connect →
               </span>
             </button>

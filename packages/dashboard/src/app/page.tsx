@@ -39,17 +39,17 @@ export default function DashboardPage() {
     <div className="min-h-screen max-w-[1720px] space-y-5 px-4 py-5 sm:px-6 lg:space-y-6 lg:px-8 lg:py-7">
       <header className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[#8a8171] sm:gap-3">
+          <div className="mono mb-3 flex flex-wrap items-center gap-2 text-[11px] uppercase text-[#9b8460] sm:gap-3">
             <span className="badge badge-warning text-[10px] px-2 py-0.5">Aegis Alpha</span>
             <span>Hermes-grade operator surface</span>
-            <span className="hidden text-[#332d20] sm:inline">/</span>
+            <span className="hidden text-[#4a2b08] sm:inline">/</span>
             <span className="basis-full sm:basis-auto">{data.source === "live" ? "Live stack" : "Demo telemetry"}</span>
           </div>
-          <h2 className="max-w-[20rem] text-3xl font-semibold leading-tight text-[#f5f0e4] sm:max-w-none sm:text-[2.15rem]">
-            <span className="block sm:inline">Enterprise agent</span>
-            <span className="block sm:inline"> command center</span>
+          <h2 className="display max-w-[21rem] text-[2rem] font-semibold leading-tight text-[#fff7e8] sm:max-w-none sm:text-[2.35rem]">
+            <span className="block sm:inline">Enterprise Agent</span>
+            <span className="block sm:inline"> Command Center</span>
           </h2>
-          <p className="mt-2 max-w-[19.5rem] break-words text-sm text-[#c8bea9] sm:max-w-3xl">
+          <p className="mt-2 max-w-[19.5rem] break-words text-sm text-[#d8c19d] sm:max-w-3xl">
             Paperclip orchestration, local LLM routing, MCP connectors, and audit-first policy control in one cockpit.
           </p>
         </div>
@@ -104,19 +104,19 @@ export default function DashboardPage() {
 
       <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#332d20] flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-[#4a2b08] flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-lg">Agent Fleet</h3>
-              <p className="text-xs text-[#8a8171] mt-1">Heartbeat posture, local model routing, and skill growth</p>
+              <p className="text-xs text-[#9b8460] mt-1">Heartbeat posture, local model routing, and skill growth</p>
             </div>
-            <Link href="/agents" className="text-xs text-[#e3a21a] flex items-center gap-1">
+            <Link href="/agents" className="text-xs text-[#ffac02] flex items-center gap-1">
               Manage <ArrowUpRight size={13} />
             </Link>
           </div>
-          <div className="divide-y divide-[#332d20]/70">
+          <div className="divide-y divide-[#4a2b08]/70">
             {data.agents.map((agent, index) => (
-              <div key={agent.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-[#e3a21a]/[0.035] sm:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr_auto]">
-                <div className={`w-10 h-10 rounded-lg border flex items-center justify-center mono text-xs font-bold ${agent.status === "active" ? "border-[#3aa35c]/45 text-[#77d28d] bg-[#3aa35c]/10" : agent.status === "idle" ? "border-[#e3a21a]/45 text-[#f2c566] bg-[#e3a21a]/10" : "border-[#8a8171]/35 text-[#8a8171] bg-white/[0.02]"}`}>
+              <div key={agent.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-[#ffac02]/[0.035] sm:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr_auto]">
+                <div className={`w-10 h-10 rounded-none border flex items-center justify-center mono text-xs font-bold ${agent.status === "active" ? "border-[#5da76d]/45 text-[#9dffb5] bg-[#5da76d]/10" : agent.status === "idle" ? "border-[#ffac02]/45 text-[#ffd8b0] bg-[#ffac02]/10" : "border-[#9b8460]/35 text-[#9b8460] bg-white/[0.02]"}`}>
                   A{index + 1}
                 </div>
                 <div className="min-w-0">
@@ -126,10 +126,10 @@ export default function DashboardPage() {
                       {agent.status}
                     </span>
                   </div>
-                  <p className="text-xs text-[#8a8171] mt-1">{agent.role}</p>
-                  <div className="mt-3 h-1.5 bg-[#090907] border border-[#332d20] rounded overflow-hidden">
+                  <p className="text-xs text-[#9b8460] mt-1">{agent.role}</p>
+                  <div className="mt-3 h-1.5 bg-[#170d02] border border-[#4a2b08] rounded overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#e3a21a] via-[#4fbcba] to-[#3aa35c]"
+                      className="h-full bg-gradient-to-r from-[#ffac02] via-[#ffd8b0] to-[#5da76d]"
                       style={{ width: `${Math.min(100, 24 + agent.skillsLearned * 4)}%` }}
                     />
                   </div>
@@ -156,10 +156,10 @@ export default function DashboardPage() {
               {Object.entries(data.serviceHealth).map(([key, online]) => (
                 <div key={key} className="panel px-3 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full ${online ? "bg-[#3aa35c]" : "bg-[#e3a21a]"}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${online ? "bg-[#5da76d]" : "bg-[#ffac02]"}`} />
                     <span className="text-sm">{serviceLabels[key as keyof typeof serviceLabels]}</span>
                   </div>
-                  <span className="mono text-xs text-[#8a8171]">{online ? "online" : "pending"}</span>
+                  <span className="mono text-xs text-[#9b8460]">{online ? "online" : "pending"}</span>
                 </div>
               ))}
             </div>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
           <div className="card">
             <div className="flex items-center gap-2 mb-4">
-              <Cpu size={18} className="text-[#4fbcba]" />
+              <Cpu size={18} className="text-[#ffd8b0]" />
               <h3 className="font-semibold text-lg">Model Routing</h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -176,7 +176,7 @@ export default function DashboardPage() {
               <BackendCell label="OpenAI" online={!!data.backends.openai} external />
               <BackendCell label="Anthropic" online={!!data.backends.anthropic} external />
             </div>
-            <p className="text-xs text-[#8a8171] mt-4">
+            <p className="text-xs text-[#9b8460] mt-4">
               {localBackendCount > 0 ? "Local inference is available for sensitive work." : "Local inference is waiting for a backend."}
             </p>
           </div>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
       <section className="grid gap-5 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <Database size={18} className="text-[#e3a21a]" />
+            <Database size={18} className="text-[#ffac02]" />
             <h3 className="font-semibold text-lg">Connected Surface</h3>
           </div>
           <div className="space-y-2">
@@ -194,11 +194,11 @@ export default function DashboardPage() {
               <div key={conn.name} className="panel px-3 py-3 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-medium">{conn.name}</div>
-                  <div className="text-[11px] text-[#8a8171]">{conn.type}</div>
+                  <div className="text-[11px] text-[#9b8460]">{conn.type}</div>
                 </div>
                 <div className="text-right">
-                  <div className={`mono text-xs ${conn.status === "connected" ? "text-[#77d28d]" : "text-[#8a8171]"}`}>{conn.status}</div>
-                  <div className="text-[11px] text-[#8a8171]">{conn.tools} tools</div>
+                  <div className={`mono text-xs ${conn.status === "connected" ? "text-[#9dffb5]" : "text-[#9b8460]"}`}>{conn.status}</div>
+                  <div className="text-[11px] text-[#9b8460]">{conn.tools} tools</div>
                 </div>
               </div>
             ))}
@@ -206,22 +206,22 @@ export default function DashboardPage() {
         </div>
 
         <div className="card p-0 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-[#332d20] px-5 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-[#4a2b08] px-5 py-4">
             <div className="flex items-center gap-2">
-              <Activity size={18} className="text-[#4fbcba]" />
+              <Activity size={18} className="text-[#ffd8b0]" />
               <h3 className="font-semibold text-lg">Audit Stream</h3>
             </div>
-            <span className="text-xs text-[#8a8171]">Immutable action log</span>
+            <span className="text-xs text-[#9b8460]">Immutable action log</span>
           </div>
-          <div className="divide-y divide-[#332d20]/70">
+          <div className="divide-y divide-[#4a2b08]/70">
             {data.auditLogs.slice(0, 7).map((event) => (
               <div key={event.id} className="grid gap-2 px-5 py-3 transition-colors hover:bg-white/[0.018] sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:gap-4">
-                <span className="mono text-xs text-[#8a8171]">
+                <span className="mono text-xs text-[#9b8460]">
                   {new Date(event.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{event.target}</div>
-                  <div className="text-[11px] text-[#8a8171]">{event.agent} / {event.backend}</div>
+                  <div className="text-[11px] text-[#9b8460]">{event.agent} / {event.backend}</div>
                 </div>
                 <span className={`badge text-[10px] px-2 py-0.5 ${event.status === "blocked" ? "badge-danger" : event.action.includes("tool") ? "badge-info" : "badge-success"}`}>
                   {event.action.replace(/_/g, " ")}
@@ -255,23 +255,23 @@ function MetricTile({
   tone: "gold" | "cyan" | "green" | "red";
 }) {
   const colors = {
-    gold: "text-[#e3a21a] bg-[#e3a21a]/10 border-[#e3a21a]/25",
-    cyan: "text-[#4fbcba] bg-[#4fbcba]/10 border-[#4fbcba]/25",
-    green: "text-[#77d28d] bg-[#3aa35c]/10 border-[#3aa35c]/25",
-    red: "text-[#ff8b6b] bg-[#e94b27]/10 border-[#e94b27]/25",
+    gold: "text-[#ffac02] bg-[#ffac02]/10 border-[#ffac02]/25",
+    cyan: "text-[#ffd8b0] bg-[#ffd8b0]/10 border-[#ffd8b0]/25",
+    green: "text-[#9dffb5] bg-[#5da76d]/10 border-[#5da76d]/25",
+    red: "text-[#ff8a61] bg-[#c92d0f]/10 border-[#c92d0f]/25",
   };
 
   return (
     <div className="card p-4">
       <div className="flex items-center justify-between mb-4">
-        <span className={`w-9 h-9 rounded-lg border flex items-center justify-center ${colors[tone]}`}>
+        <span className={`w-9 h-9 rounded-none border flex items-center justify-center ${colors[tone]}`}>
           <Icon size={18} />
         </span>
-        <Gauge size={16} className="text-[#332d20]" />
+        <Gauge size={16} className="text-[#4a2b08]" />
       </div>
-      <div className="text-xs text-[#8a8171]">{label}</div>
+      <div className="text-xs text-[#9b8460]">{label}</div>
       <div className="text-3xl font-semibold mt-1">{value}</div>
-      <div className="text-xs text-[#c8bea9] mt-2">{detail}</div>
+      <div className="text-xs text-[#d8c19d] mt-2">{detail}</div>
     </div>
   );
 }
@@ -279,8 +279,8 @@ function MetricTile({
 function MiniReadout({ label, value, good }: { label: string; value: string; good?: boolean }) {
   return (
     <div>
-      <div className="text-[#8a8171]">{label}</div>
-      <div className={`mono font-medium mt-1 ${good ? "text-[#77d28d]" : "text-[#f5f0e4]"}`}>{value}</div>
+      <div className="text-[#9b8460]">{label}</div>
+      <div className={`mono font-medium mt-1 ${good ? "text-[#9dffb5]" : "text-[#fff7e8]"}`}>{value}</div>
     </div>
   );
 }
@@ -290,9 +290,9 @@ function BackendCell({ label, online, external }: { label: string; online: boole
     <div className="panel p-3">
       <div className="flex items-center justify-between">
         <span className="mono text-sm">{label}</span>
-        <span className={`w-2 h-2 rounded-full ${online ? "bg-[#3aa35c]" : external ? "bg-[#8a8171]" : "bg-[#e3a21a]"}`} />
+        <span className={`w-2 h-2 rounded-full ${online ? "bg-[#5da76d]" : external ? "bg-[#9b8460]" : "bg-[#ffac02]"}`} />
       </div>
-      <div className="text-[11px] text-[#8a8171] mt-2">
+      <div className="text-[11px] text-[#9b8460] mt-2">
         {online ? "available" : external ? "policy gated" : "not ready"}
       </div>
     </div>
@@ -313,16 +313,16 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="card flex items-center gap-4 hover:border-[#5d4b23] hover:bg-[#e3a21a]/[0.035] transition-all group"
+      className="card flex items-center gap-4 hover:border-[#8a5a16] hover:bg-[#ffac02]/[0.035] transition-all group"
     >
-      <span className="w-10 h-10 rounded-lg bg-[#090907] border border-[#332d20] flex items-center justify-center text-[#e3a21a] group-hover:border-[#e3a21a]/40">
+      <span className="w-10 h-10 rounded-none bg-[#170d02] border border-[#4a2b08] flex items-center justify-center text-[#ffac02] group-hover:border-[#ffac02]/40">
         <Icon size={18} />
       </span>
       <div className="min-w-0">
-        <div className="font-medium text-sm group-hover:text-[#f2c566] transition-colors">{title}</div>
-        <div className="text-xs text-[#8a8171] mt-1">{description}</div>
+        <div className="font-medium text-sm group-hover:text-[#ffd8b0] transition-colors">{title}</div>
+        <div className="text-xs text-[#9b8460] mt-1">{description}</div>
       </div>
-      <ArrowUpRight size={16} className="ml-auto text-[#8a8171] group-hover:text-[#e3a21a]" />
+      <ArrowUpRight size={16} className="ml-auto text-[#9b8460] group-hover:text-[#ffac02]" />
     </Link>
   );
 }

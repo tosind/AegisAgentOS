@@ -42,13 +42,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#090907] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#170d02] px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">
-            <span className="text-[#e3a21a]">Aegis</span> Agent OS
+        <div className="mb-8 text-center">
+          <div className="display mb-7 text-xs font-semibold text-[#ffac02]">
+            Paperclip<span className="mx-3 inline-block h-1.5 w-1.5 bg-[#ffac02] align-middle" />Enterprise
+          </div>
+          <h1 className="display text-3xl font-semibold text-[#fff7e8]">
+            <span className="text-[#ffac02]">Aegis</span> Agent OS
           </h1>
-          <p className="text-[#8a8171] text-sm mt-2">
+          <p className="mt-2 text-sm text-[#9b8460]">
             Sign in to the enterprise agent command center
           </p>
         </div>
@@ -56,30 +59,30 @@ export default function LoginPage() {
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-lg bg-[#f03e3e]/10 border border-[#f03e3e]/20 text-[#f03e3e] text-sm">
+              <div className="p-3 rounded-none bg-[#ff8a61]/10 border border-[#ff8a61]/20 text-[#ff8a61] text-sm">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <label className="mono mb-1.5 block text-[11px] uppercase text-[#d8c19d]">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#090907] border border-[#332d20] rounded-lg px-3 py-2.5 text-sm focus:border-[#e3a21a] focus:outline-none"
+                className="w-full rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
                 placeholder="admin@enterprise.local"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Password</label>
+              <label className="mono mb-1.5 block text-[11px] uppercase text-[#d8c19d]">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#090907] border border-[#332d20] rounded-lg px-3 py-2.5 text-sm focus:border-[#e3a21a] focus:outline-none"
+                className="w-full rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
                 placeholder="Enter your password"
                 required
               />
@@ -94,8 +97,8 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[#332d20]">
-            <p className="text-xs text-[#8a8171] text-center">
+          <div className="mt-6 border-t border-[#4a2b08] pt-6">
+            <p className="mono text-center text-[10px] uppercase text-[#9b8460]">
               Default local admin: admin@enterprise.local / change-me-now
             </p>
 
@@ -115,11 +118,11 @@ function OIDCButton({ provider }: { provider: string }) {
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[#332d20] text-sm hover:bg-white/[0.02] transition-colors"
+      className="mono flex w-full items-center justify-center gap-2 rounded-none border border-[#4a2b08] px-4 py-2.5 text-[11px] uppercase transition-colors hover:bg-white/[0.02]"
       disabled
     >
       Continue with {provider}
-      <span className="text-[10px] text-[#8a8171] mono">(SSO)</span>
+      <span className="text-[10px] text-[#9b8460] mono">(SSO)</span>
     </button>
   );
 }

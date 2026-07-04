@@ -24,9 +24,9 @@ export default function AuditPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Audit Logs</h2>
-          <p className="text-[#6c757d] text-sm mt-1">
+          <p className="text-[#9b8460] text-sm mt-1">
             Immutable record of all agent actions —{" "}
-            <span className="text-[#40c057] font-medium">
+            <span className="text-[#9dffb5] font-medium">
               {data.auditLogs.length} events loaded from {data.source}
             </span>
           </p>
@@ -54,12 +54,12 @@ export default function AuditPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search targets..."
-          className="bg-[#14141f] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm w-64 focus:border-[#4c6ef5] focus:outline-none"
+          className="bg-[#1c1004] border border-[#4a2b08] rounded-none px-3 py-2 text-sm w-64 focus:border-[#ffac02] focus:outline-none"
         />
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="bg-[#14141f] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm text-[#adb5bd]"
+          className="bg-[#1c1004] border border-[#4a2b08] rounded-none px-3 py-2 text-sm text-[#d8c19d]"
         >
           <option value="all">All Actions</option>
           <option value="llm_call">LLM Calls</option>
@@ -70,35 +70,35 @@ export default function AuditPage() {
         <select
           value={agentFilter}
           onChange={(e) => setAgentFilter(e.target.value)}
-          className="bg-[#14141f] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm text-[#adb5bd]"
+          className="bg-[#1c1004] border border-[#4a2b08] rounded-none px-3 py-2 text-sm text-[#d8c19d]"
         >
           <option value="all">All Agents</option>
           {agentNames.map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
-        <span className="text-xs text-[#6c757d]">{filteredLogs.length} results</span>
+        <span className="text-xs text-[#9b8460]">{filteredLogs.length} results</span>
       </div>
 
       {/* Table */}
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#2a2a3a] bg-[#0d0d16]/50">
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Time</th>
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Agent</th>
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Action</th>
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Target</th>
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Level</th>
-              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Backend</th>
-              <th className="text-right py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Tokens</th>
-              <th className="text-right py-3 px-4 text-[11px] font-medium text-[#6c757d] uppercase tracking-wider">Status</th>
+            <tr className="border-b border-[#4a2b08] bg-[#170d02]/50">
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Time</th>
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Agent</th>
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Action</th>
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Target</th>
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Level</th>
+              <th className="text-left py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Backend</th>
+              <th className="text-right py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Tokens</th>
+              <th className="text-right py-3 px-4 text-[11px] font-medium text-[#9b8460] uppercase tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody>
             {filteredLogs.map((log) => (
-              <tr key={log.id} className="border-b border-[#1e1e2e] hover:bg-white/[0.01] transition-colors">
-                <td className="py-2.5 px-4 font-mono text-xs text-[#adb5bd]">
+              <tr key={log.id} className="border-b border-[#4a2b08] hover:bg-white/[0.01] transition-colors">
+                <td className="py-2.5 px-4 font-mono text-xs text-[#d8c19d]">
                   {new Date(log.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                 </td>
                 <td className="py-2.5 px-4 font-medium text-xs">{log.agent}</td>
@@ -107,12 +107,12 @@ export default function AuditPage() {
                     log.status === "blocked" ? "badge-danger" : log.action === "tool_call" ? "badge-info" : "badge-success"
                   }`}>{log.action.replace(/_/g, " ")}</span>
                 </td>
-                <td className="py-2.5 px-4 text-xs text-[#adb5bd] max-w-xs truncate">{log.target}</td>
+                <td className="py-2.5 px-4 text-xs text-[#d8c19d] max-w-xs truncate">{log.target}</td>
                 <td className="py-2.5 px-4">
                   <span className={`badge text-[10px] ${log.sensitivity === "internal" ? "badge-danger" : "badge-warning"}`}>{log.sensitivity}</span>
                 </td>
-                <td className="py-2.5 px-4 font-mono text-xs text-[#6c757d]">{log.backend}</td>
-                <td className="py-2.5 px-4 text-right font-mono text-xs text-[#adb5bd]">{log.tokens.toLocaleString()}</td>
+                <td className="py-2.5 px-4 font-mono text-xs text-[#9b8460]">{log.backend}</td>
+                <td className="py-2.5 px-4 text-right font-mono text-xs text-[#d8c19d]">{log.tokens.toLocaleString()}</td>
                 <td className="py-2.5 px-4 text-right">
                   <span className={`badge text-[10px] ${log.status === "success" ? "badge-success" : "badge-danger"}`}>
                     {log.status === "success" ? "✓ OK" : "✕ Blocked"}
@@ -123,7 +123,7 @@ export default function AuditPage() {
           </tbody>
         </table>
         {filteredLogs.length === 0 && (
-          <div className="text-center py-12 text-[#6c757d] text-sm">
+          <div className="text-center py-12 text-[#9b8460] text-sm">
             No audit logs match your filters
           </div>
         )}

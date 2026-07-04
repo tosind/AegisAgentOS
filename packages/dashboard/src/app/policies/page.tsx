@@ -10,7 +10,7 @@ export default function PoliciesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Security Policies</h2>
-          <p className="text-[#6c757d] text-sm mt-1">Define what agents can and cannot do</p>
+          <p className="text-[#9b8460] text-sm mt-1">Define what agents can and cannot do</p>
         </div>
         <button
           onClick={() => addToast("info", "New policy form coming soon")}
@@ -21,10 +21,10 @@ export default function PoliciesPage() {
       </div>
 
       {/* Default Policy */}
-      <div className="card border-[#4c6ef5]/20">
+      <div className="card border-[#ffac02]/20">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#4c6ef5]/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-none bg-[#ffac02]/10 flex items-center justify-center">
               <span className="text-lg">🛡</span>
             </div>
             <div>
@@ -33,7 +33,7 @@ export default function PoliciesPage() {
                 <span className="badge badge-success text-[10px]">Active</span>
                 <span className="badge badge-info text-[10px]">Priority 0</span>
               </div>
-              <p className="text-xs text-[#adb5bd] mt-1">Local-first, no external API calls, auto-scrub PII</p>
+              <p className="text-xs text-[#d8c19d] mt-1">Local-first, no external API calls, auto-scrub PII</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -51,10 +51,10 @@ export default function PoliciesPage() {
           <RuleBox icon="⏱" label="Heartbeat Interval" value="300s" detail="5 minutes default" />
         </div>
 
-        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#1e1e2e]">
-          <div className="text-xs text-[#6c757d]">Applied to all agents by default</div>
+        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#4a2b08]">
+          <div className="text-xs text-[#9b8460]">Applied to all agents by default</div>
           <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-xs text-[#adb5bd]">Override per-agent</span>
+            <span className="text-xs text-[#d8c19d]">Override per-agent</span>
             <Toggle />
           </label>
         </div>
@@ -74,12 +74,12 @@ export default function PoliciesPage() {
             { name: "JWT Tokens", pattern: "eyJ...", strategy: "Redact", active: true },
             { name: "IP Addresses", pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", strategy: "Mask", active: false },
           ].map((p) => (
-            <div key={p.name} className="flex items-center justify-between p-3 rounded-lg border border-[#1e1e2e] hover:border-[#2a2a3a] transition-all">
+            <div key={p.name} className="flex items-center justify-between p-3 rounded-none border border-[#4a2b08] hover:border-[#4a2b08] transition-all">
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${p.active ? "bg-[#40c057]" : "bg-[#6c757d]"}`} />
+                <div className={`w-2 h-2 rounded-full ${p.active ? "bg-[#9dffb5]" : "bg-[#9b8460]"}`} />
                 <div>
                   <div className="font-medium text-sm">{p.name}</div>
-                  <div className="text-[10px] text-[#6c757d] font-mono mt-0.5">{p.pattern}</div>
+                  <div className="text-[10px] text-[#9b8460] font-mono mt-0.5">{p.pattern}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -99,22 +99,22 @@ export default function PoliciesPage() {
 function RuleBox({ icon, label, value, detail, positive, negative }: {
   icon: string; label: string; value: string; detail: string; positive?: boolean; negative?: boolean;
 }) {
-  const valColor = positive ? "text-[#40c057]" : negative ? "text-[#f03e3e]" : "";
+  const valColor = positive ? "text-[#9dffb5]" : negative ? "text-[#ff8a61]" : "";
   return (
-    <div className="p-3 rounded-lg bg-[#0d0d16] border border-[#1e1e2e]">
+    <div className="p-3 rounded-none bg-[#170d02] border border-[#4a2b08]">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-xs">{icon}</span>
         <span className="text-xs font-medium">{label}</span>
       </div>
       <div className={`font-bold text-sm ${valColor}`}>{value}</div>
-      <div className="text-[10px] text-[#6c757d] mt-0.5">{detail}</div>
+      <div className="text-[10px] text-[#9b8460] mt-0.5">{detail}</div>
     </div>
   );
 }
 
 function Toggle({ active = false }: { active?: boolean }) {
   return (
-    <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${active ? "bg-[#4c6ef5]" : "bg-[#2a2a3a]"}`}>
+    <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 cursor-pointer ${active ? "bg-[#ffac02]" : "bg-[#4a2b08]"}`}>
       <div className={`w-4 h-4 rounded-full bg-white transition-transform ${active ? "translate-x-4" : "translate-x-0"}`} />
     </div>
   );

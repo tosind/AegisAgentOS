@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Sidebar } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -16,10 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen overflow-x-hidden bg-[#090907] text-[#f5f0e4] antialiased">
+      <body className="min-h-screen overflow-x-hidden bg-[#170d02] text-[#fff7e8] antialiased">
         <ToastProvider>
-          <Sidebar />
-          <main className="min-w-0 pt-[8.75rem] lg:ml-72 lg:pt-0">{children}</main>
+          <AppShell>{children}</AppShell>
         </ToastProvider>
       </body>
     </html>

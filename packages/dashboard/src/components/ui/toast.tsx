@@ -91,17 +91,17 @@ function ToastItem({
   }, [toast, onDismiss]);
 
   const colors = {
-    success: "border-[#40c057] bg-[#40c057]/10",
-    error: "border-[#f03e3e] bg-[#f03e3e]/10",
+    success: "border-[#9dffb5] bg-[#9dffb5]/10",
+    error: "border-[#ff8a61] bg-[#ff8a61]/10",
     warning: "border-[#fab005] bg-[#fab005]/10",
-    info: "border-[#4c6ef5] bg-[#4c6ef5]/10",
+    info: "border-[#ffac02] bg-[#ffac02]/10",
   };
 
   const icons = { success: "✓", error: "✕", warning: "⚠", info: "ℹ" };
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md shadow-lg transition-all duration-200 ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-none border backdrop-blur-md shadow-lg transition-all duration-200 ${
         colors[toast.type]
       } ${exiting ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0"}`}
     >
@@ -112,7 +112,7 @@ function ToastItem({
           setExiting(true);
           setTimeout(() => onDismiss(toast.id), 200);
         }}
-        className="text-[#6c757d] hover:text-white transition-colors text-xs"
+        className="text-[#9b8460] hover:text-white transition-colors text-xs"
       >
         ✕
       </button>

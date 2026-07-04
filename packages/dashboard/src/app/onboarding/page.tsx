@@ -43,7 +43,7 @@ export default function OnboardingPage() {
     <div className="p-8 max-w-3xl space-y-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Getting Started</h2>
-        <p className="text-[#6c757d] text-sm mt-1">
+        <p className="text-[#9b8460] text-sm mt-1">
           Set up your enterprise AI workforce in 5 steps
         </p>
       </div>
@@ -54,12 +54,12 @@ export default function OnboardingPage() {
           <span className="text-2xl">🚀</span>
           <div>
             <div className="font-semibold">Setup Progress</div>
-            <div className="text-xs text-[#6c757d]">1 of 5 steps complete</div>
+            <div className="text-xs text-[#9b8460]">1 of 5 steps complete</div>
           </div>
         </div>
-        <div className="w-full h-2 rounded-full bg-[#1e1e2e] overflow-hidden">
+        <div className="w-full h-2 rounded-full bg-[#4a2b08] overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#4c6ef5] transition-all duration-500"
+            className="h-full rounded-full bg-[#ffac02] transition-all duration-500"
             style={{ width: "20%" }}
           />
         </div>
@@ -71,14 +71,14 @@ export default function OnboardingPage() {
           <div
             key={step.num}
             className={`card flex gap-4 transition-all ${
-              step.done ? "border-[#40c057]/20 bg-[#40c057]/[0.02]" : ""
+              step.done ? "border-[#9dffb5]/20 bg-[#9dffb5]/[0.02]" : ""
             }`}
           >
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                 step.done
-                  ? "bg-[#40c057]/20 text-[#40c057]"
-                  : "bg-[#1e1e2e] text-[#6c757d]"
+                  ? "bg-[#9dffb5]/20 text-[#9dffb5]"
+                  : "bg-[#4a2b08] text-[#9b8460]"
               }`}
             >
               {step.done ? "✓" : step.num}
@@ -90,8 +90,8 @@ export default function OnboardingPage() {
                   <span className="badge badge-success text-[10px]">Done</span>
                 )}
               </div>
-              <p className="text-xs text-[#adb5bd] mt-1">{step.description}</p>
-              <p className="text-[11px] text-[#4c6ef5] mt-2 font-medium">
+              <p className="text-xs text-[#d8c19d] mt-1">{step.description}</p>
+              <p className="text-[11px] text-[#ffac02] mt-2 font-medium">
                 {step.action} →
               </p>
             </div>
@@ -118,9 +118,9 @@ function StatusRow({
   label, status, detail,
 }: { label: string; status: "connected" | "pending" | "disabled"; detail: string }) {
   const colors = {
-    connected: "bg-[#40c057]",
+    connected: "bg-[#9dffb5]",
     pending: "bg-[#fab005]",
-    disabled: "bg-[#6c757d]",
+    disabled: "bg-[#9b8460]",
   };
 
   return (
@@ -129,7 +129,7 @@ function StatusRow({
         <span className={`w-2 h-2 rounded-full ${colors[status]}`} />
         <span className="text-sm">{label}</span>
       </div>
-      <span className="text-xs text-[#6c757d]">{detail}</span>
+      <span className="text-xs text-[#9b8460]">{detail}</span>
     </div>
   );
 }

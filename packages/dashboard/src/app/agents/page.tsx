@@ -17,7 +17,7 @@ export default function AgentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Agent Fleet</h2>
-          <p className="text-[#8a8171] text-sm mt-1">
+          <p className="text-[#9b8460] text-sm mt-1">
             Manage your AI workforce — {data.source === "live" ? "runtime connected" : "demo data"}
           </p>
         </div>
@@ -54,16 +54,16 @@ export default function AgentsPage() {
       {/* Agent Cards */}
       <div className="grid grid-cols-2 gap-5">
         {data.agents.map((agent) => (
-          <div key={agent.id} className="card group hover:border-[#2a2a3a] transition-all">
+          <div key={agent.id} className="card group hover:border-[#4a2b08] transition-all">
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#e3a21a]/10 border border-[#e3a21a]/25 flex items-center justify-center text-[#e3a21a] group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-none bg-[#ffac02]/10 border border-[#ffac02]/25 flex items-center justify-center text-[#ffac02] group-hover:scale-105 transition-transform">
                   <BrainCircuit size={18} />
                 </div>
                 <div>
                   <h3 className="font-semibold">{agent.name}</h3>
-                  <p className="text-xs text-[#8a8171]">{agent.role}</p>
+                  <p className="text-xs text-[#9b8460]">{agent.role}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -82,19 +82,19 @@ export default function AgentsPage() {
             </div>
 
             {/* Config Bar */}
-            <div className="flex items-center gap-2 text-[10px] text-[#8a8171] mb-4 mono">
+            <div className="flex items-center gap-2 text-[10px] text-[#9b8460] mb-4 mono">
               <span>ID: {agent.paperclipId}</span>
               <span>•</span>
               <span>Heartbeat: {agent.heartbeatInterval}</span>
               <span>•</span>
-              <span className={agent.externalAllowed ? "text-[#f2c566]" : "text-[#77d28d]"}>
+              <span className={agent.externalAllowed ? "text-[#ffd8b0]" : "text-[#9dffb5]"}>
                 {agent.externalAllowed ? "External: Allowed" : "External: Blocked"}
               </span>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#1e1e2e]">
-              <div className="text-[11px] text-[#8a8171]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#4a2b08]">
+              <div className="text-[11px] text-[#9b8460]">
                 {agent.memoryEntries.toLocaleString()} memory entries
               </div>
               <div className="flex gap-1.5">
@@ -119,21 +119,21 @@ export default function AgentsPage() {
 }
 
 function MiniStat({ label, value, sub, color }: { label: string; value: string; sub: string; color?: string }) {
-  const colors: Record<string, string> = { green: "text-[#77d28d]", yellow: "text-[#f2c566]", blue: "text-[#86d9d8]" };
+  const colors: Record<string, string> = { green: "text-[#9dffb5]", yellow: "text-[#ffd8b0]", blue: "text-[#ffd8b0]" };
   return (
     <div className="card text-center py-4">
       <div className={`text-2xl font-bold ${color ? colors[color] : ""}`}>{value}</div>
-      <div className="text-xs text-[#8a8171] mt-1">{label}</div>
-      <div className="text-[10px] text-[#8a8171]/70">{sub}</div>
+      <div className="text-xs text-[#9b8460] mt-1">{label}</div>
+      <div className="text-[10px] text-[#9b8460]/70">{sub}</div>
     </div>
   );
 }
 
 function StatPill({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="p-2 rounded-lg bg-[#090907] border border-[#332d20] text-center">
-      <div className="text-[10px] text-[#8a8171]">{label}</div>
-      <div className={`text-sm mono mt-0.5 ${highlight ? "text-[#77d28d]" : ""}`}>{value}</div>
+    <div className="p-2 rounded-none bg-[#170d02] border border-[#4a2b08] text-center">
+      <div className="text-[10px] text-[#9b8460]">{label}</div>
+      <div className={`text-sm mono mt-0.5 ${highlight ? "text-[#9dffb5]" : ""}`}>{value}</div>
     </div>
   );
 }
