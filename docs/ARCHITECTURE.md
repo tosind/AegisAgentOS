@@ -183,10 +183,13 @@ CREATE TABLE audit_logs (
 CREATE TABLE agent_tasks (
   id UUID PRIMARY KEY,
   tenant_id UUID NOT NULL,
-  agent_id UUID NOT NULL,
-  agent_name TEXT NOT NULL,
+  agent_id UUID,
+  agent_name TEXT,
   external_task_id TEXT NOT NULL,
+  title TEXT NOT NULL,
   prompt TEXT NOT NULL,
+  board_status TEXT NOT NULL, -- 'queued', 'running', 'review', 'done', 'blocked'
+  priority TEXT NOT NULL,     -- 'low', 'medium', 'high', 'urgent'
   status TEXT NOT NULL,       -- 'queued', 'running', 'succeeded', 'failed'
   output TEXT,
   error_message TEXT,
@@ -196,6 +199,20 @@ CREATE TABLE agent_tasks (
   duration_ms INTEGER,
   started_at TIMESTAMP,
   completed_at TIMESTAMP,
+  created_at TIMESTAMP
+);
+
+-- Observable task execution trace
+CREATE TABLE agent_task_events (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL,
+  task_id UUID NOT NULL REFERENCES agent_tasks(id),
+  agent_id UUID,
+  sequence INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT,
+  payload JSONB,
   created_at TIMESTAMP
 );
 

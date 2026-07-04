@@ -26,9 +26,12 @@ export type RuntimeTask = {
   id: string;
   externalTaskId: string;
   tenantId: string;
-  agentId: string;
-  agentName: string;
+  agentId: string | null;
+  agentName: string | null;
+  title: string;
   prompt: string;
+  boardStatus: "queued" | "running" | "review" | "done" | "blocked";
+  priority: "low" | "medium" | "high" | "urgent";
   status: "queued" | "running" | "succeeded" | "failed";
   output: string | null;
   errorMessage: string | null;
@@ -39,6 +42,19 @@ export type RuntimeTask = {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+};
+
+export type RuntimeTaskEvent = {
+  id: string;
+  tenantId: string;
+  taskId: string;
+  agentId: string | null;
+  sequence: number;
+  eventType: string;
+  title: string;
+  message: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
 };
 
 function parseJson<T>(value: unknown, fallback: T): T {
@@ -89,7 +105,10 @@ function rowToTask(row: any): RuntimeTask {
     tenantId: row.tenant_id,
     agentId: row.agent_id,
     agentName: row.agent_name,
+    title: row.title || row.prompt?.slice(0, 72) || "Untitled task",
     prompt: row.prompt,
+    boardStatus: row.board_status,
+    priority: row.priority,
     status: row.status,
     output: row.output,
     errorMessage: row.error_message,
@@ -100,6 +119,21 @@ function rowToTask(row: any): RuntimeTask {
     createdAt: new Date(row.created_at).toISOString(),
     startedAt: row.started_at ? new Date(row.started_at).toISOString() : null,
     completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : null,
+  };
+}
+
+function rowToEvent(row: any): RuntimeTaskEvent {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    taskId: row.task_id,
+    agentId: row.agent_id,
+    sequence: Number(row.sequence || 0),
+    eventType: row.event_type,
+    title: row.title,
+    message: row.message,
+    payload: parseJson(row.payload, {}),
+    createdAt: new Date(row.created_at).toISOString(),
   };
 }
 
@@ -243,6 +277,7 @@ export class AgentRegistry {
     agentId: string;
     agentName: string;
     externalTaskId?: string;
+    title?: string;
     prompt: string;
   }): Promise<RuntimeTask> {
     const result = await pool.query(
@@ -251,22 +286,160 @@ export class AgentRegistry {
          agent_id,
          agent_name,
          external_task_id,
+         title,
          prompt,
+         board_status,
          status,
          started_at
        )
-       VALUES ($1, $2, $3, $4, $5, 'running', NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, 'running', 'running', NOW())
        RETURNING *`,
       [
         params.tenantId,
         params.agentId,
         params.agentName,
         params.externalTaskId || randomUUID(),
+        params.title || params.prompt.slice(0, 72),
         params.prompt,
       ],
     );
 
-    return rowToTask(result.rows[0]);
+    const task = rowToTask(result.rows[0]);
+    await this.addTaskEvent({
+      tenantId: params.tenantId,
+      taskId: task.id,
+      agentId: params.agentId,
+      eventType: "task_started",
+      title: "Task started",
+      message: `${params.agentName} started execution.`,
+      payload: { externalTaskId: task.externalTaskId },
+    });
+    return task;
+  }
+
+  async createTask(params: {
+    tenantId?: string;
+    agentId?: string | null;
+    agentName?: string | null;
+    title: string;
+    prompt: string;
+    priority?: RuntimeTask["priority"];
+    boardStatus?: RuntimeTask["boardStatus"];
+  }): Promise<RuntimeTask> {
+    const tenantId = params.tenantId || DEFAULT_TENANT_ID;
+    const result = await pool.query(
+      `INSERT INTO agent_tasks (
+         tenant_id,
+         agent_id,
+         agent_name,
+         external_task_id,
+         title,
+         prompt,
+         priority,
+         board_status,
+         status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queued')
+       RETURNING *`,
+      [
+        tenantId,
+        params.agentId || null,
+        params.agentName || null,
+        randomUUID(),
+        params.title,
+        params.prompt,
+        params.priority || "medium",
+        params.boardStatus || "queued",
+      ],
+    );
+
+    const task = rowToTask(result.rows[0]);
+    await this.addTaskEvent({
+      tenantId,
+      taskId: task.id,
+      agentId: params.agentId || null,
+      eventType: "task_created",
+      title: "Task created",
+      message: task.title,
+      payload: { priority: task.priority, boardStatus: task.boardStatus },
+    });
+    return task;
+  }
+
+  async updateTask(params: {
+    taskId: string;
+    tenantId?: string;
+    agentId?: string | null;
+    agentName?: string | null;
+    title?: string;
+    prompt?: string;
+    priority?: RuntimeTask["priority"];
+    boardStatus?: RuntimeTask["boardStatus"];
+  }): Promise<RuntimeTask | null> {
+    const existing = await pool.query(`SELECT * FROM agent_tasks WHERE id = $1`, [params.taskId]);
+    if (!existing.rows[0]) return null;
+
+    const current = rowToTask(existing.rows[0]);
+    const result = await pool.query(
+      `UPDATE agent_tasks
+       SET agent_id = $2,
+           agent_name = $3,
+           title = $4,
+           prompt = $5,
+           priority = $6,
+           board_status = $7
+       WHERE id = $1
+       RETURNING *`,
+      [
+        params.taskId,
+        params.agentId === undefined ? current.agentId : params.agentId,
+        params.agentName === undefined ? current.agentName : params.agentName,
+        params.title || current.title,
+        params.prompt || current.prompt,
+        params.priority || current.priority,
+        params.boardStatus || current.boardStatus,
+      ],
+    );
+
+    const task = rowToTask(result.rows[0]);
+    await this.addTaskEvent({
+      tenantId: params.tenantId || task.tenantId,
+      taskId: task.id,
+      agentId: task.agentId,
+      eventType: "task_updated",
+      title: "Task updated",
+      message: task.title,
+      payload: { priority: task.priority, boardStatus: task.boardStatus },
+    });
+    return task;
+  }
+
+  async markTaskRunning(taskId: string, agent: RuntimeAgent): Promise<RuntimeTask | null> {
+    const result = await pool.query(
+      `UPDATE agent_tasks
+       SET agent_id = $2,
+           agent_name = $3,
+           status = 'running',
+           board_status = 'running',
+           started_at = NOW(),
+           completed_at = NULL,
+           error_message = NULL
+       WHERE id = $1
+       RETURNING *`,
+      [taskId, agent.id, agent.name],
+    );
+    if (!result.rows[0]) return null;
+    const task = rowToTask(result.rows[0]);
+    await this.addTaskEvent({
+      tenantId: task.tenantId,
+      taskId: task.id,
+      agentId: agent.id,
+      eventType: "task_started",
+      title: "Task started",
+      message: `${agent.name} started execution.`,
+      payload: { externalTaskId: task.externalTaskId },
+    });
+    return task;
   }
 
   async completeTask(
@@ -282,6 +455,7 @@ export class AgentRegistry {
     const rows = await pool.query(
       `UPDATE agent_tasks
        SET status = 'succeeded',
+           board_status = 'review',
            output = $2,
            iterations = $3,
            tokens_used = $4,
@@ -299,13 +473,29 @@ export class AgentRegistry {
         result.durationMs,
       ],
     );
-    return rowToTask(rows.rows[0]);
+    const task = rowToTask(rows.rows[0]);
+    await this.addTaskEvent({
+      tenantId: task.tenantId,
+      taskId: task.id,
+      agentId: task.agentId,
+      eventType: "task_completed",
+      title: "Task completed",
+      message: result.output.slice(0, 500),
+      payload: {
+        iterations: result.iterations,
+        tokensUsed: result.tokensUsed,
+        toolCalls: result.toolCalls.length,
+        durationMs: result.durationMs,
+      },
+    });
+    return task;
   }
 
   async failTask(taskId: string, errorMessage: string, durationMs: number): Promise<RuntimeTask> {
     const rows = await pool.query(
       `UPDATE agent_tasks
        SET status = 'failed',
+           board_status = 'blocked',
            error_message = $2,
            duration_ms = $3,
            completed_at = NOW()
@@ -313,7 +503,17 @@ export class AgentRegistry {
        RETURNING *`,
       [taskId, errorMessage, durationMs],
     );
-    return rowToTask(rows.rows[0]);
+    const task = rowToTask(rows.rows[0]);
+    await this.addTaskEvent({
+      tenantId: task.tenantId,
+      taskId: task.id,
+      agentId: task.agentId,
+      eventType: "task_failed",
+      title: "Task failed",
+      message: errorMessage,
+      payload: { durationMs },
+    });
+    return task;
   }
 
   async listTasks(tenantId = DEFAULT_TENANT_ID, limit = 25): Promise<RuntimeTask[]> {
@@ -327,5 +527,63 @@ export class AgentRegistry {
     );
 
     return result.rows.map(rowToTask);
+  }
+
+  async getTask(taskId: string): Promise<RuntimeTask | null> {
+    const result = await pool.query(`SELECT * FROM agent_tasks WHERE id = $1`, [taskId]);
+    return result.rows[0] ? rowToTask(result.rows[0]) : null;
+  }
+
+  async addTaskEvent(params: {
+    tenantId: string;
+    taskId: string;
+    agentId?: string | null;
+    eventType: string;
+    title: string;
+    message?: string | null;
+    payload?: Record<string, unknown>;
+  }): Promise<RuntimeTaskEvent> {
+    const sequence = await pool.query(
+      `SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence
+       FROM agent_task_events
+       WHERE task_id = $1`,
+      [params.taskId],
+    );
+    const result = await pool.query(
+      `INSERT INTO agent_task_events (
+         tenant_id,
+         task_id,
+         agent_id,
+         sequence,
+         event_type,
+         title,
+         message,
+         payload
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        params.tenantId,
+        params.taskId,
+        params.agentId || null,
+        Number(sequence.rows[0].next_sequence),
+        params.eventType,
+        params.title,
+        params.message || null,
+        JSON.stringify(params.payload || {}),
+      ],
+    );
+    return rowToEvent(result.rows[0]);
+  }
+
+  async listTaskEvents(taskId: string): Promise<RuntimeTaskEvent[]> {
+    const result = await pool.query(
+      `SELECT *
+       FROM agent_task_events
+       WHERE task_id = $1
+       ORDER BY sequence ASC, created_at ASC`,
+      [taskId],
+    );
+    return result.rows.map(rowToEvent);
   }
 }

@@ -71,10 +71,13 @@ CREATE TABLE IF NOT EXISTS agent_configs (
 CREATE TABLE IF NOT EXISTS agent_tasks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id UUID NOT NULL,
-  agent_id UUID NOT NULL,
-  agent_name TEXT NOT NULL,
+  agent_id UUID,
+  agent_name TEXT,
   external_task_id TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT 'Untitled task',
   prompt TEXT NOT NULL,
+  board_status TEXT NOT NULL DEFAULT 'queued',
+  priority TEXT NOT NULL DEFAULT 'medium',
   status TEXT NOT NULL DEFAULT 'queued',
   output TEXT,
   error_message TEXT,
@@ -87,9 +90,32 @@ CREATE TABLE IF NOT EXISTS agent_tasks (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT 'Untitled task';
+ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS board_status TEXT NOT NULL DEFAULT 'queued';
+ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'medium';
+ALTER TABLE agent_tasks ALTER COLUMN agent_id DROP NOT NULL;
+ALTER TABLE agent_tasks ALTER COLUMN agent_name DROP NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_tenant_time ON agent_tasks (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_time ON agent_tasks (agent_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_board ON agent_tasks (tenant_id, board_status, created_at DESC);
+
+-- ── Agent Execution Trace Events ───────────────────────────
+CREATE TABLE IF NOT EXISTS agent_task_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL,
+  task_id UUID NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE,
+  agent_id UUID,
+  sequence INTEGER NOT NULL DEFAULT 0,
+  event_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT,
+  payload JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_task_events_task_sequence ON agent_task_events (task_id, sequence, created_at);
 
 -- ── Audit Logs ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_logs (

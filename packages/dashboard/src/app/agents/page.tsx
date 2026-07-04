@@ -4,14 +4,16 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   BrainCircuit,
   Database,
+  GitBranch,
   Play,
   RefreshCw,
+  ScrollText,
   Settings2,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import type { AgentSummary, AgentTaskSummary } from "@/lib/ops-data";
+import type { AgentSummary, AgentTaskEvent, AgentTaskSummary } from "@/lib/ops-data";
 import { useOpsData } from "@/lib/use-ops-data";
 
 type InspectorState = {
@@ -19,6 +21,19 @@ type InspectorState = {
   kind: "memory" | "skills";
   items: any[];
 };
+
+type TraceState = {
+  task: AgentTaskSummary;
+  events: AgentTaskEvent[];
+};
+
+const BOARD_COLUMNS: Array<{ id: AgentTaskSummary["boardStatus"]; label: string }> = [
+  { id: "queued", label: "Queued" },
+  { id: "running", label: "Running" },
+  { id: "review", label: "Review" },
+  { id: "done", label: "Done" },
+  { id: "blocked", label: "Blocked" },
+];
 
 export default function AgentsPage() {
   const { addToast } = useToast();
@@ -33,8 +48,15 @@ export default function AgentsPage() {
   const [prompt, setPrompt] = useState(
     "Review the current connected systems and summarize what this agent can safely do next.",
   );
+  const [taskDraft, setTaskDraft] = useState({
+    title: "Investigate internal agent harness gap",
+    prompt: "Inspect the current harness state and propose the next concrete implementation step.",
+    priority: "high" as AgentTaskSummary["priority"],
+  });
   const [lastRun, setLastRun] = useState<AgentTaskSummary | null>(null);
   const [inspector, setInspector] = useState<InspectorState | null>(null);
+  const [trace, setTrace] = useState<TraceState | null>(null);
+  const [boardBusy, setBoardBusy] = useState("");
 
   useEffect(() => {
     if (!selectedAgentId && data.agents[0]) {
@@ -115,6 +137,93 @@ export default function AgentsPage() {
       });
     } catch (error: any) {
       addToast("error", error.message || `Could not load ${kind}`);
+    }
+  };
+
+  const createBoardTask = async (event: FormEvent) => {
+    event.preventDefault();
+    setBoardBusy("create");
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "create",
+          agentId: selectedAgent?.id || null,
+          agentName: selectedAgent?.name || null,
+          ...taskDraft,
+          boardStatus: "queued",
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Task creation failed");
+      addToast("success", `Task queued: ${body.task.title}`);
+      await refresh();
+    } catch (error: any) {
+      addToast("error", error.message || "Task creation failed");
+    } finally {
+      setBoardBusy("");
+    }
+  };
+
+  const moveTask = async (
+    task: AgentTaskSummary,
+    boardStatus: AgentTaskSummary["boardStatus"],
+  ) => {
+    setBoardBusy(`${task.id}:move`);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ boardStatus }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Task update failed");
+      await refresh();
+    } catch (error: any) {
+      addToast("error", error.message || "Task update failed");
+    } finally {
+      setBoardBusy("");
+    }
+  };
+
+  const inspectTrace = async (task: AgentTaskSummary) => {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/events`, { cache: "no-store" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Could not load task trace");
+      setTrace({ task, events: body.events || [] });
+    } catch (error: any) {
+      addToast("error", error.message || "Could not load task trace");
+    }
+  };
+
+  const runBoardTask = async (task: AgentTaskSummary) => {
+    if (!selectedAgent && !task.agentId) {
+      addToast("error", "Select an agent before running this task");
+      return;
+    }
+    setBoardBusy(`${task.id}:run`);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: task.agentId || selectedAgent?.id,
+          maxIterations: 4,
+        }),
+      });
+      const body = await response.json();
+      if (body.task) setLastRun(body.task);
+      if (!response.ok) throw new Error(body.error || "Task run failed");
+      addToast("success", `Task run completed: ${body.task.title}`);
+      await refresh();
+      if (body.task) await inspectTrace(body.task);
+    } catch (error: any) {
+      addToast("error", error.message || "Task run failed");
+      await refresh();
+    } finally {
+      setBoardBusy("");
     }
   };
 
@@ -245,6 +354,82 @@ export default function AgentsPage() {
         </div>
       </section>
 
+      <section className="card">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <GitBranch size={18} className="text-[#ffac02]" />
+              <h3 className="text-lg font-semibold">Kanban Work Board</h3>
+            </div>
+            <p className="text-xs text-[#9b8460]">
+              Paperclip-style work items backed by `agent_tasks`; run a card to generate trace events, audit rows, and memory.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={createBoardTask} className="mb-5 grid gap-3 xl:grid-cols-[0.55fr_1fr_10rem_auto]">
+          <input
+            value={taskDraft.title}
+            onChange={(event) => setTaskDraft((current) => ({ ...current, title: event.target.value }))}
+            className="rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+            placeholder="Task title"
+            required
+          />
+          <input
+            value={taskDraft.prompt}
+            onChange={(event) => setTaskDraft((current) => ({ ...current, prompt: event.target.value }))}
+            className="rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+            placeholder="Task prompt"
+            required
+          />
+          <select
+            value={taskDraft.priority}
+            onChange={(event) => setTaskDraft((current) => ({ ...current, priority: event.target.value as AgentTaskSummary["priority"] }))}
+            className="rounded-none border border-[#4a2b08] bg-[#120800] px-3 py-2.5 text-sm text-[#fff7e8] focus:border-[#ffac02] focus:outline-none"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <button type="submit" disabled={boardBusy === "create"} className="btn btn-primary justify-center">
+            Queue Task
+          </button>
+        </form>
+
+        <div className="grid gap-3 xl:grid-cols-5">
+          {BOARD_COLUMNS.map((column) => {
+            const tasks = data.tasks.filter((task) => task.boardStatus === column.id);
+            return (
+              <div key={column.id} className="panel min-h-52 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="mono text-[11px] font-semibold uppercase text-[#ffd8b0]">{column.label}</h4>
+                  <span className="badge text-[10px]">{tasks.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {tasks.length === 0 ? (
+                    <div className="border border-dashed border-[#4a2b08] px-3 py-8 text-center text-xs text-[#9b8460]">
+                      No cards
+                    </div>
+                  ) : (
+                    tasks.map((task) => (
+                      <KanbanCard
+                        key={task.id}
+                        task={task}
+                        busy={boardBusy.startsWith(task.id)}
+                        onMove={moveTask}
+                        onRun={runBoardTask}
+                        onTrace={inspectTrace}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[1fr_0.75fr]">
         <div className="grid gap-4 lg:grid-cols-2">
           {data.agents.length === 0 ? (
@@ -316,6 +501,100 @@ export default function AgentsPage() {
           )}
         </section>
       )}
+
+      {trace && (
+        <section className="card">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <ScrollText size={18} className="text-[#ffac02]" />
+                <h3 className="text-lg font-semibold">Execution Trace</h3>
+              </div>
+              <p className="text-xs text-[#9b8460]">{trace.task.title}</p>
+            </div>
+            <button onClick={() => setTrace(null)} className="btn btn-secondary text-xs">
+              Close
+            </button>
+          </div>
+          {trace.events.length === 0 ? (
+            <p className="text-sm text-[#9b8460]">No trace events recorded yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {trace.events.map((event) => (
+                <div key={event.id} className="panel grid gap-2 p-3 sm:grid-cols-[4rem_12rem_1fr]">
+                  <div className="mono text-[10px] uppercase text-[#9b8460]">#{event.sequence}</div>
+                  <div>
+                    <div className="mono text-[10px] uppercase text-[#ffac02]">
+                      {event.eventType.replace(/_/g, " ")}
+                    </div>
+                    <div className="mt-1 text-sm font-medium">{event.title}</div>
+                  </div>
+                  <div className="min-w-0 text-sm text-[#d8c19d]">
+                    {event.message || "No message"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function KanbanCard({
+  task,
+  busy,
+  onMove,
+  onRun,
+  onTrace,
+}: {
+  task: AgentTaskSummary;
+  busy: boolean;
+  onMove: (task: AgentTaskSummary, status: AgentTaskSummary["boardStatus"]) => void;
+  onRun: (task: AgentTaskSummary) => void;
+  onTrace: (task: AgentTaskSummary) => void;
+}) {
+  return (
+    <div className="border border-[#4a2b08] bg-[#170d02]/70 p-3">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <h5 className="text-sm font-semibold leading-snug">{task.title}</h5>
+        <span className="mono shrink-0 text-[10px] uppercase text-[#ffac02]">{task.priority}</span>
+      </div>
+      <p className="line-clamp-3 text-xs text-[#9b8460]">{task.prompt}</p>
+      {task.output || task.errorMessage ? (
+        <p className="mt-3 line-clamp-2 text-xs text-[#d8c19d]">{task.output || task.errorMessage}</p>
+      ) : null}
+      <div className="mono mt-3 flex flex-wrap gap-2 text-[10px] uppercase text-[#9b8460]">
+        <span>{task.agentName || "unassigned"}</span>
+        <span>{task.tokensUsed} tokens</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <button
+          onClick={() => onRun(task)}
+          disabled={busy || task.status === "running"}
+          className="btn btn-primary px-2 py-1 text-[11px]"
+        >
+          <Play size={12} />
+          Run
+        </button>
+        <button onClick={() => onTrace(task)} className="btn btn-secondary px-2 py-1 text-[11px]">
+          <ScrollText size={12} />
+          Trace
+        </button>
+        <select
+          value={task.boardStatus}
+          onChange={(event) => onMove(task, event.target.value as AgentTaskSummary["boardStatus"])}
+          disabled={busy}
+          className="rounded-none border border-[#4a2b08] bg-[#120800] px-2 py-1 text-[11px] text-[#fff7e8]"
+        >
+          {BOARD_COLUMNS.map((column) => (
+            <option key={column.id} value={column.id}>
+              {column.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
@@ -395,8 +674,8 @@ function TaskRow({ task }: { task: AgentTaskSummary }) {
     <div className="px-5 py-4">
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{task.prompt}</div>
-          <div className="mt-1 text-[11px] text-[#9b8460]">{task.agentName}</div>
+          <div className="truncate text-sm font-medium">{task.title}</div>
+          <div className="mt-1 text-[11px] text-[#9b8460]">{task.agentName || "unassigned"}</div>
         </div>
         <span className={`badge shrink-0 text-[10px] ${task.status === "succeeded" ? "badge-success" : task.status === "failed" ? "badge-danger" : "badge-warning"}`}>
           {task.status}

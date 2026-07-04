@@ -18,7 +18,9 @@ Agent configuration lives in `agent_configs`:
 
 Agent memory lives in `agent_memory` and requires pgvector. Keep embeddings tenant-scoped and agent-scoped.
 
-Task runs live in `agent_tasks`. Every dashboard-triggered run creates a row, updates it to `succeeded` or `failed`, and stores output, token count, duration, iterations, and tool calls.
+Task work lives in `agent_tasks`. A task can be queued as a Kanban card, moved across board statuses, assigned to an agent, then updated to `succeeded` or `failed` after execution. Rows store title, prompt, board status, priority, output, token count, duration, iterations, and tool calls.
+
+Observable execution events live in `agent_task_events`. The runtime appends state transitions, model call metadata, tool call metadata, memory writes, and completion/failure events. This is an audit-friendly activity trace, not hidden model chain-of-thought.
 
 ## Register an Agent
 
@@ -92,7 +94,42 @@ curl -X POST http://localhost:8421/execute \
   }'
 ```
 
-The runtime routes the task through the security layer, checks policy, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, writes the task result to `agent_tasks`, and stores memory when enabled.
+The runtime routes the task through the security layer, checks policy, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, appends execution events to `agent_task_events`, writes the task result to `agent_tasks`, and stores memory when enabled.
+
+## Queue and Run Board Tasks
+
+Create a queued task card without running it:
+
+```bash
+curl -X POST http://localhost:8421/tasks \
+  -H "Authorization: Bearer $AGENT_RUNTIME_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "agentId": "<agent-config-or-paperclip-id>",
+    "title": "Investigate billing anomaly",
+    "prompt": "Review the latest billing anomaly and summarize the safest next action.",
+    "priority": "high"
+  }'
+```
+
+Run an existing card:
+
+```bash
+curl -X POST http://localhost:8421/tasks/<task-row-id>/run \
+  -H "Authorization: Bearer $AGENT_RUNTIME_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "<agent-config-or-paperclip-id>",
+    "maxIterations": 4
+  }'
+```
+
+Read its execution trace:
+
+```bash
+curl http://localhost:8421/tasks/<task-row-id>/events
+```
 
 To use Ollama, make sure the model exists:
 
@@ -144,5 +181,6 @@ Before enabling an agent for real users:
 - Confirm `/agents/:id/status` returns a useful status.
 - Confirm its allowed MCP tools are minimal.
 - Run a harmless task and inspect `audit_logs`.
+- Inspect the task's `agent_task_events` trace for expected model/tool/memory activity.
 - Confirm PII is scrubbed before any external API route.
 - Confirm memory is written to `agent_memory` only for the expected tenant.

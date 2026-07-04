@@ -2,15 +2,15 @@
 
 Aegis Agent OS is a self-hosted AI agent platform that combines a Hermes-style operations dashboard with a Paperclip orchestration backbone, local-first LLM routing, PII scrubbing, audit logs, and MCP-based enterprise integrations.
 
-Status: alpha. The workspace now builds and tests cleanly, the dashboard can run from demo data or live local services, and Docker Compose defines the intended full stack. It is ready for a public repo as an early platform foundation, not as a hardened production release.
+Status: alpha internal harness. The workspace builds and tests cleanly, the dashboard can run from demo data or live local services, and Docker Compose defines the intended full stack. It is suitable for a public repo as an early open-source foundation, but it is not enterprise-ready production software yet.
 
 ## What Is Included
 
-- Next.js admin dashboard for agents, audit logs, policies, integrations, onboarding, and settings
-- Agent runtime service with DB-backed agent registry, task ledger, memory, skills, tool execution, and Paperclip webhook intake
+- Next.js admin dashboard for agents, Kanban work management, execution traces, audit logs, policies, integrations, onboarding, and settings
+- Agent runtime service with DB-backed agent registry, task ledger, execution events, memory, skills, tool execution, and Paperclip webhook intake
 - Security layer with PII detection, policy evaluation, audit logging, and local-first LLM routing
 - MCP hub with connector scaffolds for PostgreSQL, Slack, GitHub, REST APIs, SMTP email, and filesystem tools
-- Postgres + pgvector schema for policies, agents, task runs, audit logs, memory, skills, MCP connections, and approvals
+- Postgres + pgvector schema for policies, agents, task runs, trace events, audit logs, memory, skills, MCP connections, and approvals
 - Docker Compose stack for dashboard, Paperclip, Postgres, Ollama, vLLM, runtime, security layer, MCP hub, and nginx
 
 ## Quick Start
@@ -77,9 +77,25 @@ The Agents page is a live harness when the runtime is online:
 
 - `Create Agent` writes to `agent_configs`
 - `Run Task` calls the runtime `/execute` endpoint through `/api/tasks`
-- task output is persisted in `agent_tasks`
+- the Kanban board creates queued cards in `agent_tasks`
+- `Run` on a card executes that existing work item through `/tasks/:id/run`
+- task output, board status, priority, and errors are persisted in `agent_tasks`
+- observable execution events are persisted in `agent_task_events`
 - successful runs write memory to `agent_memory`
 - LLM calls write audit rows through the security layer
+
+The trace view intentionally records observable execution metadata, model summaries, tool calls, and state transitions. It does not expose hidden model chain-of-thought.
+
+## Enterprise Readiness
+
+Aegis is not enterprise-ready yet. The current repo is a functional pre-production harness for building toward Hermes/OpenClaw/Paperclip-style internal agents. Before using it for production operations, the project still needs:
+
+- hardened authentication and role-based access control across every service route
+- approval queues for write tools, deployments, finance actions, shell execution, and external API calls
+- first-class Paperclip and Hermes/OpenClaw adapters instead of only compatible task/runtime primitives
+- streaming execution traces and resumable multi-agent sessions
+- budgets, quotas, tenant isolation tests, and stronger policy enforcement around MCP tools
+- production secret storage, backup/restore drills, audit retention, and observability dashboards
 
 ## Deployment Docs
 

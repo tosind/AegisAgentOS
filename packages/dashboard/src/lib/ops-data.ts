@@ -17,9 +17,12 @@ export type AgentSummary = {
 export type AgentTaskSummary = {
   id: string;
   externalTaskId: string;
-  agentId: string;
-  agentName: string;
+  agentId: string | null;
+  agentName: string | null;
+  title: string;
   prompt: string;
+  boardStatus: "queued" | "running" | "review" | "done" | "blocked";
+  priority: "low" | "medium" | "high" | "urgent";
   status: "queued" | "running" | "succeeded" | "failed";
   output: string | null;
   errorMessage: string | null;
@@ -29,6 +32,18 @@ export type AgentTaskSummary = {
   durationMs: number | null;
   createdAt: string;
   completedAt: string | null;
+};
+
+export type AgentTaskEvent = {
+  id: string;
+  taskId: string;
+  agentId: string | null;
+  sequence: number;
+  eventType: string;
+  title: string;
+  message: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
 };
 
 export type AuditEvent = {

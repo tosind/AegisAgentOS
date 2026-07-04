@@ -74,6 +74,126 @@ export function createServer() {
     }
   });
 
+  app.post("/tasks", authMiddleware, requireFields("title", "prompt"), async (req: Request, res: Response) => {
+    try {
+      const agent = req.body.agentId ? await registry.findAgent(req.body.agentId) : null;
+      const task = await registry.createTask({
+        tenantId: req.body.tenantId || "00000000-0000-0000-0000-000000000000",
+        agentId: agent?.id || req.body.agentId || null,
+        agentName: agent?.name || req.body.agentName || null,
+        title: req.body.title,
+        prompt: req.body.prompt,
+        priority: req.body.priority || "medium",
+        boardStatus: req.body.boardStatus || "queued",
+      });
+      res.status(201).json({ task });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/tasks/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const agent = req.body.agentId ? await registry.findAgent(req.body.agentId) : null;
+      const task = await registry.updateTask({
+        taskId: req.params.id,
+        tenantId: req.body.tenantId,
+        agentId: agent?.id ?? req.body.agentId,
+        agentName: agent?.name ?? req.body.agentName,
+        title: req.body.title,
+        prompt: req.body.prompt,
+        priority: req.body.priority,
+        boardStatus: req.body.boardStatus,
+      });
+      if (!task) {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+      res.json({ task });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/tasks/:id/events", async (req: Request, res: Response) => {
+    try {
+      const events = await registry.listTaskEvents(req.params.id);
+      res.json({ events });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/tasks/:id/run", authMiddleware, async (req: Request, res: Response) => {
+    const startTime = Date.now();
+    try {
+      const existingTask = await registry.getTask(req.params.id);
+      if (!existingTask) {
+        res.status(404).json({ success: false, error: "Task not found" });
+        return;
+      }
+
+      const agentId = req.body.agentId || existingTask.agentId;
+      if (!agentId) {
+        res.status(400).json({ success: false, error: "agentId is required to run this task" });
+        return;
+      }
+
+      const agent = await registry.findAgent(agentId);
+      if (!agent) {
+        res.status(404).json({ success: false, error: `No agent config found for ${agentId}` });
+        return;
+      }
+
+      const task = await registry.markTaskRunning(existingTask.id, agent);
+      if (!task) {
+        res.status(404).json({ success: false, error: "Task not found" });
+        return;
+      }
+
+      const result = await engine.executeTask({
+        taskId: task.externalTaskId,
+        tenantId: task.tenantId,
+        agentId: agent.id,
+        agentName: agent.name,
+        prompt: task.prompt,
+        context: req.body.context || {},
+        maxIterations: req.body.maxIterations || 10,
+        onEvent: async (event) => {
+          await registry.addTaskEvent({
+            tenantId: task.tenantId,
+            taskId: task.id,
+            agentId: agent.id,
+            ...event,
+          });
+        },
+      });
+
+      const completedTask = await registry.completeTask(task.id, {
+        output: result.output,
+        iterations: result.iterations,
+        tokensUsed: result.tokensUsed,
+        toolCalls: result.toolCalls,
+        durationMs: Date.now() - startTime,
+      });
+
+      res.json({ ...result, task: completedTask, durationMs: Date.now() - startTime });
+    } catch (err: any) {
+      let task = null;
+      try {
+        task = await registry.failTask(req.params.id, err.message, Date.now() - startTime);
+      } catch (taskErr: any) {
+        console.error(`❌ Failed to update task ledger:`, taskErr.message);
+      }
+      res.status(500).json({
+        success: false,
+        error: err.message,
+        task,
+        durationMs: Date.now() - startTime,
+      });
+    }
+  });
+
   // ── Execute task (auth required) ─────────────────────────
   app.post("/execute", authMiddleware, requireFields("taskId", "tenantId", "agentId", "prompt"), async (req: Request, res: Response) => {
     const startTime = Date.now();
@@ -111,6 +231,7 @@ export function createServer() {
         agentId: agent.id,
         agentName: agentName || agent.name,
         externalTaskId: taskId,
+        title: req.body.title,
         prompt,
       });
       taskRecordId = task.id;
@@ -125,6 +246,14 @@ export function createServer() {
         prompt,
         context,
         maxIterations: maxIterations || 10,
+        onEvent: async (event) => {
+          await registry.addTaskEvent({
+            tenantId,
+            taskId: task.id,
+            agentId: agent.id,
+            ...event,
+          });
+        },
       });
 
       const completedTask = await registry.completeTask(task.id, {

@@ -47,6 +47,12 @@ export class AgentEngine {
     prompt: string;
     context?: Record<string, unknown>;
     maxIterations?: number;
+    onEvent?: (event: {
+      eventType: string;
+      title: string;
+      message?: string;
+      payload?: Record<string, unknown>;
+    }) => Promise<void> | void;
   }): Promise<{
     success: boolean;
     output: string;
@@ -62,9 +68,18 @@ export class AgentEngine {
       prompt,
       context = {},
       maxIterations = 10,
+      onEvent,
     } = params;
 
     console.log(`🎯 Agent "${agentName}" executing task: ${taskId}`);
+
+    // Build the message history
+    await onEvent?.({
+      eventType: "context_prepared",
+      title: "Context prepared",
+      message: "System prompt and task prompt assembled.",
+      payload: { hasContext: Object.keys(context).length > 0 },
+    });
 
     // Build the message history
     const messages: LLMRequest["messages"] = [
@@ -82,6 +97,12 @@ export class AgentEngine {
         content: `Relevant past context:\n${memoryContext}`,
       });
     }
+    await onEvent?.({
+      eventType: "memory_loaded",
+      title: "Memory loaded",
+      message: `${memories.length} relevant memory entries loaded.`,
+      payload: { count: memories.length },
+    });
 
     // Add relevant skills
     const relevantSkills = await this.skills.findRelevant(agentId, prompt);
@@ -94,6 +115,12 @@ export class AgentEngine {
         content: `Available skills:\n${skillContext}`,
       });
     }
+    await onEvent?.({
+      eventType: "skills_loaded",
+      title: "Skills loaded",
+      message: `${relevantSkills.length} relevant skills loaded.`,
+      payload: { count: relevantSkills.length },
+    });
 
     // Add task context
     if (Object.keys(context).length > 0) {
@@ -123,6 +150,13 @@ export class AgentEngine {
     while (iterations < maxIterations) {
       iterations++;
 
+      await onEvent?.({
+        eventType: "model_call_started",
+        title: `Model call ${iterations}`,
+        message: "Routing through security layer.",
+        payload: { iteration: iterations, toolDefinitions: toolDefs.length },
+      });
+
       // Route through security layer
       const llmResponse = await this.callLLM(
         tenantId,
@@ -132,6 +166,19 @@ export class AgentEngine {
       );
 
       totalTokens += llmResponse.tokensUsed;
+
+      await onEvent?.({
+        eventType: "model_call_completed",
+        title: `Model response ${iterations}`,
+        message: llmResponse.content.slice(0, 500),
+        payload: {
+          iteration: iterations,
+          backend: llmResponse.backend,
+          model: llmResponse.model,
+          tokensUsed: llmResponse.tokensUsed,
+          toolCalls: llmResponse.toolCalls?.length || 0,
+        },
+      });
 
       // If no tool calls, we're done
       if (!llmResponse.toolCalls || llmResponse.toolCalls.length === 0) {
@@ -144,6 +191,12 @@ export class AgentEngine {
 
       for (const toolCall of llmResponse.toolCalls) {
         try {
+          await onEvent?.({
+            eventType: "tool_call_started",
+            title: `Tool call: ${toolCall.name}`,
+            message: "Executing MCP-backed tool.",
+            payload: { arguments: toolCall.arguments },
+          });
           const result = await this.tools.executeTool(
             tenantId,
             toolCall.name,
@@ -154,11 +207,23 @@ export class AgentEngine {
             name: toolCall.name,
             result: JSON.stringify(result),
           });
+          await onEvent?.({
+            eventType: "tool_call_completed",
+            title: `Tool completed: ${toolCall.name}`,
+            message: JSON.stringify(result).slice(0, 500),
+            payload: { result },
+          });
         } catch (err: any) {
           toolCalls.push({ name: toolCall.name, result: { error: err.message } });
           toolResults.push({
             name: toolCall.name,
             result: `Error: ${err.message}`,
+          });
+          await onEvent?.({
+            eventType: "tool_call_failed",
+            title: `Tool failed: ${toolCall.name}`,
+            message: err.message,
+            payload: { arguments: toolCall.arguments },
           });
         }
       }
@@ -187,10 +252,22 @@ export class AgentEngine {
       iterations,
       toolCalls: toolCalls.length,
     });
+    await onEvent?.({
+      eventType: "memory_written",
+      title: "Memory written",
+      message: "Task prompt and result stored as agent memory.",
+      payload: { taskId },
+    });
 
     // Learn from this execution
     if (iterations > 1 && finalOutput) {
       await this.skills.extractSkill(agentId, prompt, finalOutput);
+      await onEvent?.({
+        eventType: "skill_extraction",
+        title: "Skill extraction attempted",
+        message: "The runtime inspected the task for reusable skill patterns.",
+        payload: { iterations },
+      });
     }
 
     return {

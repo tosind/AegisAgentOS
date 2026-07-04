@@ -6,7 +6,7 @@ This guide covers three deployment shapes:
 - Full local stack: Docker Compose with Postgres/pgvector, Paperclip, agent runtime, MCP hub, security layer, Ollama, and the dashboard.
 - Hosted stack: the same services pointed at your own managed Postgres-compatible database.
 
-The project is alpha software. Use it as a self-hosted foundation and review the security checklist before exposing it outside a private network.
+The project is alpha software. Use it as a self-hosted harness foundation and review the security checklist before exposing it outside a private network. Do not treat this checkout as production enterprise software until the readiness items in the root README are complete.
 
 ## Prerequisites
 
@@ -161,15 +161,20 @@ The live flow is:
 
 1. Open `http://localhost:3000/agents`.
 2. Create an agent. This writes an `agent_configs` row.
-3. Run a task. The dashboard posts to `/api/tasks`, which calls the runtime `/execute` endpoint.
-4. The runtime writes an `agent_tasks` row with status `running`.
-5. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
-6. The runtime writes output, token count, duration, and tool calls back to `agent_tasks`.
-7. Successful runs store task memory in `agent_memory`.
+3. Queue work on the Kanban board. The dashboard posts to `/api/tasks` with `mode: "create"` and writes a queued `agent_tasks` row.
+4. Run a card. The dashboard posts to `/api/tasks/:id/run`, which calls the runtime `/tasks/:id/run` endpoint.
+5. The runtime marks the existing task `running`, assigns the selected agent, and starts appending observable trace rows to `agent_task_events`.
+6. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
+7. The runtime writes output, token count, duration, tool calls, and the final board status back to `agent_tasks`.
+8. Successful runs store task memory in `agent_memory`.
+
+For one-off execution, the dashboard `Run Task` form still posts through `/api/tasks` to the runtime `/execute` endpoint. That path creates and runs a task immediately instead of first placing it on the Kanban board.
+
+The trace view records state transitions such as task creation, context preparation, memory/skill loading, model calls, tool calls, memory writes, success, and failure. It does not expose hidden model chain-of-thought.
 
 If a model is not installed, the task fails and the failure is preserved in `agent_tasks`; the UI should show that error instead of pretending the agent ran.
 
-For an existing database created before the task ledger existed, apply the latest `docker/init-db.sql` or add the `agent_tasks` table from that file.
+For an existing database created before the Kanban and trace schema existed, apply the latest `docker/init-db.sql` or add the `agent_tasks` columns and `agent_task_events` table from that file.
 
 ## Reverse Proxy
 

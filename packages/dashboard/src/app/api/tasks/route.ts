@@ -14,6 +14,28 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const payload = await request.json();
+  const createOnly = payload.mode === "create" || payload.runNow === false;
+  if (createOnly) {
+    const { response, body } = await proxyJson(
+      `${serviceUrls.agentRuntime}/tasks`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          tenantId: DEFAULT_TENANT_ID,
+          agentId: payload.agentId || null,
+          agentName: payload.agentName || null,
+          title: payload.title,
+          prompt: payload.prompt,
+          priority: payload.priority || "medium",
+          boardStatus: payload.boardStatus || "queued",
+        }),
+      },
+      10000,
+    );
+
+    return NextResponse.json(body || {}, { status: response.status });
+  }
+
   const { response, body } = await proxyJson(
     `${serviceUrls.agentRuntime}/execute`,
     {
@@ -23,6 +45,7 @@ export async function POST(request: Request) {
         tenantId: DEFAULT_TENANT_ID,
         agentId: payload.agentId,
         agentName: payload.agentName,
+        title: payload.title,
         prompt: payload.prompt,
         context: payload.context || {},
         maxIterations: payload.maxIterations || 4,
