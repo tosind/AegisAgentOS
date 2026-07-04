@@ -1,0 +1,250 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL (shared database for all services) ──────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: enterprise-postgres
+    environment:
+      POSTGRES_USER: enterprise
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-enterprise_secret}
+      POSTGRES_DB: enterprise_agents
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterprise"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-net
+
+  # ── vLLM Server (local LLM inference) ──────────────────────
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: enterprise-vllm
+    command:
+      - "--model"
+      - "${VLLM_MODEL:-meta-llama/Llama-3.1-70B-Instruct}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--max-model-len"
+      - "${VLLM_MAX_LEN:-32768}"
+      - "--gpu-memory-utilization"
+      - "${VLLM_GPU_MEM:-0.90}"
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VLLM_GPU_COUNT:-1}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - enterprise-net
+    profiles:
+      - gpu  # Only start if --profile gpu is used
+
+  # ── Ollama (fallback local LLM, no GPU required) ───────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: enterprise-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - enterprise-net
+
+  # ── Paperclip (agent orchestration) ────────────────────────
+  # NOTE: Paperclip must be cloned and built locally before starting.
+  #   git clone https://github.com/paperclipai/paperclip.git ../paperclip
+  #   cd ../paperclip && npm install && npm run build
+  # Or use the Paperclip CLI to start a local instance:
+  #   npx paperclipai dev
+  paperclip:
+    build:
+      context: ${PAPERCLIP_CONTEXT:-../../paperclip}
+      dockerfile: Dockerfile
+    container_name: enterprise-paperclip
+    environment:
+      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/paperclip
+      PAPERCLIP_PORT: "9123"
+      PAPERCLIP_HOST: "0.0.0.0"
+      NODE_ENV: production
+    ports:
+      - "9123:9123"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - paperclip_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9123/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-net
+
+  # ── Security Layer (LLM router, PII scrubber, policy engine) ─
+  security-layer:
+    build:
+      context: ..
+      dockerfile: packages/security-layer/Dockerfile
+    container_name: enterprise-security-layer
+    environment:
+      PORT: "8423"
+      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      VLLM_URL: http://vllm:8000/v1
+      OLLAMA_URL: http://ollama:11434
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
+      SECURITY_LAYER_API_KEY: ${SECURITY_LAYER_API_KEY:-esk_dev_security_layer_key}
+      MCP_HUB_API_KEY: ${MCP_HUB_API_KEY:-esk_dev_mcp_hub_key}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY:-esk_dev_dashboard_key}
+      PAPERCLIP_API_KEY: ${PAPERCLIP_API_KEY:-esk_dev_paperclip_key}
+    ports:
+      - "8423:8423"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - enterprise-net
+
+  # ── Enterprise Agent Runtime ───────────────────────────────
+  agent-runtime:
+    build:
+      context: ..
+      dockerfile: packages/agent-runtime/Dockerfile
+    container_name: enterprise-agent-runtime
+    environment:
+      PORT: "8421"
+      PAPERCLIP_API_URL: http://paperclip:9123
+      PAPERCLIP_API_KEY: ${PAPERCLIP_API_KEY:-}
+      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      SECURITY_LAYER_URL: http://security-layer:8423
+      SECURITY_LAYER_API_KEY: ${SECURITY_LAYER_API_KEY:-esk_dev_security_layer_key}
+      VLLM_URL: http://vllm:8000/v1
+      OLLAMA_URL: http://ollama:11434
+      MCP_HUB_URL: http://mcp-hub:8422
+      MCP_HUB_API_KEY: ${MCP_HUB_API_KEY:-esk_dev_mcp_hub_key}
+      DEFAULT_LLM: ${DEFAULT_LLM:-ollama}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8421:8421"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      security-layer:
+        condition: service_started
+      paperclip:
+        condition: service_healthy
+    volumes:
+      - agent_memory:/app/memory
+      - agent_skills:/app/skills
+    networks:
+      - enterprise-net
+
+  # ── MCP Hub (enterprise integrations) ──────────────────────
+  mcp-hub:
+    build:
+      context: ..
+      dockerfile: packages/mcp-hub/Dockerfile
+    container_name: enterprise-mcp-hub
+    environment:
+      PORT: "8422"
+      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      AGENT_RUNTIME_URL: http://agent-runtime:8421
+      AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
+    ports:
+      - "8422:8422"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_started
+    volumes:
+      - mcp_configs:/app/configs
+    networks:
+      - enterprise-net
+
+  # ── Admin Dashboard ────────────────────────────────────────
+  dashboard:
+    build:
+      context: ..
+      dockerfile: packages/dashboard/Dockerfile
+    container_name: enterprise-dashboard
+    environment:
+      NEXT_PUBLIC_PAPERCLIP_URL: http://paperclip:9123
+      NEXT_PUBLIC_AGENT_RUNTIME_URL: http://agent-runtime:8421
+      NEXT_PUBLIC_MCP_HUB_URL: http://mcp-hub:8422
+      AGENT_RUNTIME_URL: http://agent-runtime:8421
+      SECURITY_LAYER_URL: http://security-layer:8423
+      MCP_HUB_URL: http://mcp-hub:8422
+      DASHBOARD_ADMIN_EMAIL: ${DASHBOARD_ADMIN_EMAIL:-admin@enterprise.local}
+      DASHBOARD_ADMIN_PASSWORD: ${DASHBOARD_ADMIN_PASSWORD:-change-me-now}
+      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+    ports:
+      - "3000:3000"
+    depends_on:
+      - paperclip
+      - agent-runtime
+      - mcp-hub
+    networks:
+      - enterprise-net
+
+  # ── Nginx Reverse Proxy (optional, for production) ─────────
+  nginx:
+    image: nginx:alpine
+    container_name: enterprise-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - dashboard
+      - paperclip
+    networks:
+      - enterprise-net
+    profiles:
+      - production
+
+networks:
+  enterprise-net:
+    driver: bridge
+    name: enterprise-net
+
+volumes:
+  postgres_data:
+  hf_cache:
+  ollama_data:
+  paperclip_data:
+  agent_memory:
+  agent_skills:
+  mcp_configs:
