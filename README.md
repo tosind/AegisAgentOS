@@ -25,7 +25,7 @@ npm run build
 Run the dashboard locally:
 
 ```bash
-npm run dev -w @enterprise/dashboard -- --port 3000
+DASHBOARD_ADMIN_PASSWORD=change-me-now npm run dev -w @enterprise/dashboard -- --port 3000
 ```
 
 Default local dashboard login:
@@ -35,7 +35,15 @@ admin@enterprise.local
 change-me-now
 ```
 
-Override the password with `DASHBOARD_ADMIN_PASSWORD`.
+Production-mode dashboard login requires `DASHBOARD_ADMIN_PASSWORD` to be set.
+
+Smoke-test the dashboard:
+
+```bash
+DASHBOARD_BASE_URL=http://localhost:3000 \
+DASHBOARD_SMOKE_PASSWORD=change-me-now \
+npm run smoke:dashboard
+```
 
 ## Full Stack With Docker
 
@@ -64,6 +72,11 @@ docker compose -f docker/docker-compose.yml --profile gpu up -d --build
 ## Dashboard Data Mode
 
 The dashboard calls `/api/ops`. If the local services are online, it reports live service health, audit rows, integrations, and backend availability. If services are offline, it falls back to packaged demo data so a fresh checkout still presents the product clearly.
+
+## Deployment Docs
+
+- [Deployment guide](docs/DEPLOYMENT.md) covers local preview, Docker Compose, managed Postgres/pgvector, model backends, reverse proxy, backups, and production hardening.
+- [Agent deployment guide](docs/AGENTS.md) covers Paperclip agent registration, database-backed memory, MCP tool connections, policy defaults, and runtime task execution.
 
 ## Security Notes
 

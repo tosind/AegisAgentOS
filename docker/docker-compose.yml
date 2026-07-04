@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ── PostgreSQL (shared database for all services) ──────────
   postgres:
@@ -92,7 +90,7 @@ services:
       dockerfile: Dockerfile
     container_name: enterprise-paperclip
     environment:
-      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/paperclip
+      DATABASE_URL: ${PAPERCLIP_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/paperclip}
       PAPERCLIP_PORT: "9123"
       PAPERCLIP_HOST: "0.0.0.0"
       NODE_ENV: production
@@ -119,7 +117,7 @@ services:
     container_name: enterprise-security-layer
     environment:
       PORT: "8423"
-      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
       VLLM_URL: http://vllm:8000/v1
       OLLAMA_URL: http://ollama:11434
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -146,7 +144,7 @@ services:
       PORT: "8421"
       PAPERCLIP_API_URL: http://paperclip:9123
       PAPERCLIP_API_KEY: ${PAPERCLIP_API_KEY:-}
-      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
       SECURITY_LAYER_URL: http://security-layer:8423
       SECURITY_LAYER_API_KEY: ${SECURITY_LAYER_API_KEY:-esk_dev_security_layer_key}
       VLLM_URL: http://vllm:8000/v1
@@ -178,7 +176,7 @@ services:
     container_name: enterprise-mcp-hub
     environment:
       PORT: "8422"
-      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
       AGENT_RUNTIME_URL: http://agent-runtime:8421
       AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
     ports:
@@ -208,7 +206,7 @@ services:
       MCP_HUB_URL: http://mcp-hub:8422
       DASHBOARD_ADMIN_EMAIL: ${DASHBOARD_ADMIN_EMAIL:-admin@enterprise.local}
       DASHBOARD_ADMIN_PASSWORD: ${DASHBOARD_ADMIN_PASSWORD:-change-me-now}
-      DATABASE_URL: postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents
+      DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
     ports:
       - "3000:3000"
     depends_on:

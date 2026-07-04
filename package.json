@@ -14,6 +14,7 @@
     "build": "npm run build -w @enterprise/shared && npm run build -w @enterprise/agent-runtime && npm run build -w @enterprise/security-layer && npm run build -w @enterprise/mcp-hub && npm run build -w @enterprise/dashboard",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck -w @enterprise/shared --if-present && npm run typecheck -w @enterprise/agent-runtime --if-present && npm run typecheck -w @enterprise/security-layer --if-present && npm run typecheck -w @enterprise/mcp-hub --if-present && npm run typecheck -w @enterprise/dashboard --if-present",
+    "smoke:dashboard": "node scripts/smoke-dashboard.mjs",
     "dev": "echo 'Run individual packages with: npm run dev -w @enterprise/<package>'",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:up:gpu": "docker compose -f docker/docker-compose.yml --profile gpu up -d",

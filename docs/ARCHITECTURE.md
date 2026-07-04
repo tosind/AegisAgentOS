@@ -140,7 +140,7 @@ Incoming task
 
 ## Database Schema
 
-### PostgreSQL (pglite) — Tenant-isolated
+### PostgreSQL + pgvector - Tenant-isolated
 
 ```sql
 -- Security policies

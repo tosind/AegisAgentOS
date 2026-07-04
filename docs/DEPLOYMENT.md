@@ -1,118 +1,203 @@
-# Aegis Agent OS — Deployment Guide
+# Aegis Agent OS Deployment Guide
 
-## Quick Start
+This guide covers three deployment shapes:
 
-### Prerequisites
-- Docker & Docker Compose v2+
-- (Optional) NVIDIA GPU + drivers for vLLM
-- (Optional) HuggingFace token for gated models
+- Local preview: dashboard only, backed by packaged demo data.
+- Full local stack: Docker Compose with Postgres/pgvector, Paperclip, agent runtime, MCP hub, security layer, Ollama, and the dashboard.
+- Hosted stack: the same services pointed at your own managed Postgres-compatible database.
 
-### 1. Clone and Setup
+The project is alpha software. Use it as a self-hosted foundation and review the security checklist before exposing it outside a private network.
+
+## Prerequisites
+
+- Node.js 20+
+- Docker and Docker Compose v2+
+- A Paperclip checkout available to Docker via `PAPERCLIP_CONTEXT`
+- PostgreSQL 16 with the `vector` extension for production or managed database deployments
+- Optional: NVIDIA GPU drivers for the `vllm` Compose profile
+
+## Local Dashboard Preview
+
+Use this when you only want to inspect the Hermes-style dashboard and demo data.
 
 ```bash
-cd enterprise
-
-# Build all images
-docker compose -f docker/docker-compose.yml build
-
-# Start the stack (without GPU)
-docker compose -f docker/docker-compose.yml up -d
-
-# Or with GPU support
-docker compose -f docker/docker-compose.yml --profile gpu up -d
+npm install
+npm run build -w @enterprise/dashboard
+DASHBOARD_ADMIN_PASSWORD=change-me-now npm run start -w @enterprise/dashboard -- --hostname 0.0.0.0 --port 3000
 ```
 
-### 2. Verify Services
+Open `http://localhost:3000` and sign in with:
+
+```text
+admin@enterprise.local
+change-me-now
+```
+
+Run the dashboard smoke test:
 
 ```bash
-# Check all services are running
-docker compose ps
+DASHBOARD_BASE_URL=http://localhost:3000 \
+DASHBOARD_SMOKE_EMAIL=admin@enterprise.local \
+DASHBOARD_SMOKE_PASSWORD=change-me-now \
+npm run smoke:dashboard
+```
 
-# Dashboard
-open http://localhost:3000
+## Full Stack With Docker Compose
 
-# Paperclip UI
-open http://localhost:9123
+1. Copy the example environment.
 
-# Agent Runtime health
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and change every `change-me-now` value.
+
+3. Clone Paperclip next to this repo, or set `PAPERCLIP_CONTEXT` to its path.
+
+```bash
+git clone <paperclip-repo-url> ../paperclip
+```
+
+4. Start the stack.
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+5. Verify the services.
+
+```bash
+docker compose -f docker/docker-compose.yml ps
 curl http://localhost:8421/health
-
-# MCP Hub health
 curl http://localhost:8422/health
+curl http://localhost:8423/health
 ```
 
-### 3. Pull Default Model (Ollama)
+Open:
+
+- Dashboard: `http://localhost:3000`
+- Paperclip: `http://localhost:9123`
+- Agent runtime: `http://localhost:8421`
+- MCP hub: `http://localhost:8422`
+- Security layer: `http://localhost:8423`
+
+## Use Your Own Database
+
+Aegis services share one application database named by `AEGIS_DATABASE_URL`. Paperclip can use a separate database named by `PAPERCLIP_DATABASE_URL`.
+
+For a managed database, create two databases or schemas:
+
+```text
+enterprise_agents
+paperclip
+```
+
+Your database must support:
+
+- PostgreSQL 16 compatible SQL
+- `uuid-ossp`
+- `vector` from pgvector
+- TLS connections if the database is outside the Docker network
+
+Set these values in `.env`:
 
 ```bash
-docker compose exec ollama ollama pull llama3.1:70b
-docker compose exec ollama ollama pull nomic-embed-text
+AEGIS_DATABASE_URL=postgresql://aegis_user:strong-password@db.example.com:5432/enterprise_agents?sslmode=require
+PAPERCLIP_DATABASE_URL=postgresql://paperclip_user:strong-password@db.example.com:5432/paperclip?sslmode=require
 ```
 
-### 4. Create Your First Agent
-
-1. Open the Paperclip UI at http://localhost:9123
-2. Create a company and an agent
-3. Register the agent in the enterprise platform
-4. Configure security policies
-5. Start assigning tasks!
-
-## Architecture
-
-```
-  Dashboard (:3000)     Paperclip (:9123)     vLLM (:8000)
-        │                      │                    │
-        └──────────────────────┼────────────────────┘
-                               │
-                    Agent Runtime (:8421)
-                               │
-                    ┌──────────┼──────────┐
-                    │          │          │
-              Security Layer  MCP Hub   PostgreSQL
-                (:8423)      (:8422)    (:5432)
-```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DB_PASSWORD` | `enterprise_secret` | PostgreSQL password |
-| `PAPERCLIP_API_KEY` | — | Paperclip API key for agents |
-| `VLLM_MODEL` | `meta-llama/Llama-3.1-70B-Instruct` | Default vLLM model |
-| `VLLM_GPU_COUNT` | `1` | Number of GPUs for vLLM |
-| `HF_TOKEN` | — | HuggingFace token (for gated models) |
-| `DEFAULT_LLM` | `ollama` | Default LLM backend (`vllm` or `ollama`) |
-| `LOG_LEVEL` | `info` | Logging level |
-
-## Production Deployment
-
-For production, use the `--profile production` flag to enable Nginx reverse proxy:
+Then initialize the Aegis schema:
 
 ```bash
-docker compose -f docker/docker-compose.yml --profile production up -d
+psql "$AEGIS_DATABASE_URL" -f docker/init-db.sql
 ```
 
-### Production Checklist
-- [ ] Change `DB_PASSWORD` to a strong password
-- [ ] Configure SSL certificates in `docker/nginx.conf`
-- [ ] Set up proper firewall rules (only expose :80/:443)
-- [ ] Configure regular database backups
-- [ ] Set up monitoring (Prometheus/Grafana)
-- [ ] Review and customize security policies
-- [ ] Test failover for vLLM → Ollama fallback
+If your managed provider does not allow `CREATE DATABASE`, remove the first Paperclip database creation block from `docker/init-db.sql` before running it. Keep the table, index, `uuid-ossp`, and `vector` setup for the Aegis database.
 
-## Development
+Start the services after the schema exists:
 
 ```bash
-# Install dependencies
-cd packages/shared && npm install
-cd packages/security-layer && npm install
-cd packages/agent-runtime && npm install
-cd packages/mcp-hub && npm install
-cd packages/dashboard && npm install
-
-# Build all packages
-npm run build
-
-# Run individual services in development
-npm run dev -w @enterprise/dashboard
+docker compose -f docker/docker-compose.yml up -d --build
 ```
+
+## Local Models
+
+The default Compose stack starts Ollama. Pull at least one chat model and one embedding model:
+
+```bash
+docker compose -f docker/docker-compose.yml exec ollama ollama pull llama3.1:8b
+docker compose -f docker/docker-compose.yml exec ollama ollama pull nomic-embed-text
+```
+
+For GPU-backed vLLM:
+
+```bash
+docker compose -f docker/docker-compose.yml --profile gpu up -d --build
+```
+
+Useful environment values:
+
+```bash
+DEFAULT_LLM=ollama
+VLLM_MODEL=meta-llama/Llama-3.1-70B-Instruct
+VLLM_GPU_COUNT=1
+HF_TOKEN=<token-for-gated-models>
+```
+
+## Reverse Proxy
+
+The optional production profile starts nginx:
+
+```bash
+docker compose -f docker/docker-compose.yml --profile production up -d --build
+```
+
+Before using it publicly:
+
+- Add TLS certificates and hostnames in `docker/nginx.conf`.
+- Expose only `80` and `443` at the firewall.
+- Keep service ports `8421`, `8422`, `8423`, `9123`, and `5432` private.
+- Put authentication and rate limits in front of any public route.
+
+## Backups
+
+Back up both Aegis and Paperclip data. For the bundled Postgres service:
+
+```bash
+docker compose -f docker/docker-compose.yml exec postgres \
+  pg_dump -U enterprise enterprise_agents > aegis-$(date +%F).sql
+
+docker compose -f docker/docker-compose.yml exec postgres \
+  pg_dump -U enterprise paperclip > paperclip-$(date +%F).sql
+```
+
+For managed databases, use provider snapshots plus periodic logical dumps.
+
+## Production Checklist
+
+- Change `DB_PASSWORD`, `DASHBOARD_ADMIN_PASSWORD`, `JWT_SECRET`, all service API keys, and all Paperclip secrets.
+- Use `AEGIS_DATABASE_URL` and `PAPERCLIP_DATABASE_URL` values with TLS.
+- Run `docker/init-db.sql` once against the Aegis database.
+- Enable backups and test restore into a staging database.
+- Restrict service ports to the private network.
+- Replace placeholder credential storage with KMS, Vault, or your provider secret store.
+- Review policy defaults before allowing write tools or shell/filesystem connectors.
+- Run `npm run test`, `npm run typecheck`, `npm run build`, and `npm run smoke:dashboard`.
+- Review `npm audit --omit=dev` before each release.
+
+## Troubleshooting
+
+`/api/ops` shows demo data:
+The dashboard could not reach the runtime, security layer, or MCP hub. Check `AGENT_RUNTIME_URL`, `SECURITY_LAYER_URL`, `MCP_HUB_URL`, service health endpoints, and Docker networking.
+
+Dashboard login fails:
+Set `DASHBOARD_ADMIN_PASSWORD` in the running environment. The development shortcut for `@enterprise.local` users is not enabled in production mode.
+
+Postgres startup fails on `vector`:
+Use the `pgvector/pgvector:pg16` image or install pgvector in your managed database before running `docker/init-db.sql`.
+
+Paperclip build fails:
+Set `PAPERCLIP_CONTEXT` to a valid local Paperclip checkout that contains a Dockerfile.
+
+Managed database initialization fails on `CREATE DATABASE`:
+Run `docker/init-db.sql` after removing the first block that creates the `paperclip` database. Managed providers commonly require databases to be created from their console.

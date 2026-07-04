@@ -99,7 +99,7 @@ export default function LoginPage() {
 
           <div className="mt-6 border-t border-[#4a2b08] pt-6">
             <p className="mono text-center text-[10px] uppercase text-[#9b8460]">
-              Default local admin: admin@enterprise.local / change-me-now
+              Local admin: admin@enterprise.local / DASHBOARD_ADMIN_PASSWORD
             </p>
 
             <div className="mt-4 space-y-2">
