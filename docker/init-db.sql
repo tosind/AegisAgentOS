@@ -67,6 +67,30 @@ CREATE TABLE IF NOT EXISTS agent_configs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ── Agent Task Ledger ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS agent_tasks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL,
+  agent_id UUID NOT NULL,
+  agent_name TEXT NOT NULL,
+  external_task_id TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued',
+  output TEXT,
+  error_message TEXT,
+  iterations INTEGER DEFAULT 0,
+  tokens_used INTEGER DEFAULT 0,
+  tool_calls JSONB DEFAULT '[]',
+  duration_ms INTEGER,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_tenant_time ON agent_tasks (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_time ON agent_tasks (agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks (tenant_id, status);
+
 -- ── Audit Logs ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

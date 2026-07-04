@@ -4,6 +4,7 @@
 import express, { type Request, type Response } from "express";
 import { AgentEngine } from "./engine.js";
 import { MemorySystem } from "./memory.js";
+import { AgentRegistry } from "./registry.js";
 import { SkillEngine } from "./skills.js";
 import { ToolRegistry } from "./tools.js";
 import {
@@ -24,6 +25,7 @@ export function createServer() {
 
   const engine = new AgentEngine();
   const memory = new MemorySystem();
+  const registry = new AgentRegistry();
   const skills = new SkillEngine();
   const tools = new ToolRegistry();
 
@@ -32,9 +34,50 @@ export function createServer() {
     res.json({ status: "ok", service: "agent-runtime" });
   });
 
+  // ── Agent registry ───────────────────────────────────────
+  app.get("/agents", async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req.query.tenantId as string) || "00000000-0000-0000-0000-000000000000";
+      const agents = await registry.listAgents(tenantId);
+      res.json({ agents });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/agents", authMiddleware, requireFields("name"), async (req: Request, res: Response) => {
+    try {
+      const agent = await registry.createAgent({
+        tenantId: req.body.tenantId,
+        name: req.body.name,
+        role: req.body.role,
+        paperclipAgentId: req.body.paperclipAgentId,
+        defaultModel: req.body.defaultModel,
+        fallbackModel: req.body.fallbackModel,
+        externalApiAllowed: req.body.externalApiAllowed,
+        heartbeatIntervalSec: req.body.heartbeatIntervalSec,
+      });
+      res.status(201).json({ agent });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/tasks", async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req.query.tenantId as string) || "00000000-0000-0000-0000-000000000000";
+      const limit = parseInt((req.query.limit as string) || "25", 10);
+      const tasks = await registry.listTasks(tenantId, limit);
+      res.json({ tasks });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── Execute task (auth required) ─────────────────────────
   app.post("/execute", authMiddleware, requireFields("taskId", "tenantId", "agentId", "prompt"), async (req: Request, res: Response) => {
     const startTime = Date.now();
+    let taskRecordId: string | null = null;
     try {
       const {
         taskId,
@@ -53,16 +96,43 @@ export function createServer() {
         return;
       }
 
-      console.log(`📋 Executing task ${taskId} for agent ${agentName || agentId}`);
+      const agent = await registry.findAgent(agentId);
+      if (!agent) {
+        res.status(404).json({
+          success: false,
+          error: `No agent config found for ${agentId}`,
+          durationMs: Date.now() - startTime,
+        });
+        return;
+      }
+
+      const task = await registry.startTask({
+        tenantId,
+        agentId: agent.id,
+        agentName: agentName || agent.name,
+        externalTaskId: taskId,
+        prompt,
+      });
+      taskRecordId = task.id;
+
+      console.log(`📋 Executing task ${taskId} for agent ${agentName || agent.name}`);
 
       const result = await engine.executeTask({
         taskId,
         tenantId,
-        agentId,
-        agentName: agentName || "Agent",
+        agentId: agent.id,
+        agentName: agentName || agent.name,
         prompt,
         context,
         maxIterations: maxIterations || 10,
+      });
+
+      const completedTask = await registry.completeTask(task.id, {
+        output: result.output,
+        iterations: result.iterations,
+        tokensUsed: result.tokensUsed,
+        toolCalls: result.toolCalls,
+        durationMs: Date.now() - startTime,
       });
 
       console.log(
@@ -71,27 +141,49 @@ export function createServer() {
 
       res.json({
         ...result,
+        task: completedTask,
         durationMs: Date.now() - startTime,
       });
     } catch (err: any) {
       console.error(`❌ Task execution failed:`, err.message);
+      let task = null;
+      if (taskRecordId) {
+        try {
+          task = await registry.failTask(taskRecordId, err.message, Date.now() - startTime);
+        } catch (taskErr: any) {
+          console.error(`❌ Failed to update task ledger:`, taskErr.message);
+        }
+      }
       res.status(500).json({
         success: false,
         error: err.message,
+        task,
         durationMs: Date.now() - startTime,
       });
     }
   });
 
   // ── Agent status ─────────────────────────────────────────
-  app.get("/agents/:id/status", (_req: Request, res: Response) => {
-    // Query agent status from Paperclip
-    res.json({
-      agentId: _req.params.id,
-      status: "idle",
-      currentTask: null,
-      lastHeartbeat: new Date().toISOString(),
-    });
+  app.get("/agents/:id/status", async (req: Request, res: Response) => {
+    try {
+      const agent = await registry.findAgent(req.params.id);
+      if (!agent) {
+        res.status(404).json({ error: "Agent not found" });
+        return;
+      }
+      res.json({
+        agentId: agent.id,
+        paperclipAgentId: agent.paperclipAgentId,
+        status: agent.status,
+        currentTask: null,
+        lastHeartbeat: agent.lastActive,
+        tasksToday: agent.tasksToday,
+        successRate: agent.successRate,
+        memoryEntries: agent.memoryEntries,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── Memory endpoints ─────────────────────────────────────

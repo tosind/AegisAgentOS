@@ -120,6 +120,7 @@ services:
       DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
       VLLM_URL: http://vllm:8000/v1
       OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
       SECURITY_LAYER_API_KEY: ${SECURITY_LAYER_API_KEY:-esk_dev_security_layer_key}
@@ -149,8 +150,10 @@ services:
       SECURITY_LAYER_API_KEY: ${SECURITY_LAYER_API_KEY:-esk_dev_security_layer_key}
       VLLM_URL: http://vllm:8000/v1
       OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       MCP_HUB_URL: http://mcp-hub:8422
       MCP_HUB_API_KEY: ${MCP_HUB_API_KEY:-esk_dev_mcp_hub_key}
+      DEFAULT_AGENT_MODEL: ${DEFAULT_AGENT_MODEL:-llama3.1:8b}
       DEFAULT_LLM: ${DEFAULT_LLM:-ollama}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:

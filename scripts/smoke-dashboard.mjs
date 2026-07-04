@@ -32,7 +32,7 @@ async function assertOpsApi() {
   }
 
   const body = await response.json();
-  const requiredArrays = ["agents", "auditLogs", "connections"];
+  const requiredArrays = ["agents", "tasks", "auditLogs", "connections"];
   for (const key of requiredArrays) {
     if (!Array.isArray(body[key])) {
       throw new Error(`/api/ops missing array field: ${key}`);
@@ -45,7 +45,7 @@ async function assertOpsApi() {
     throw new Error("/api/ops missing backends object");
   }
 
-  return `/api/ops ${response.status} source=${body.source} agents=${body.agents.length} audit=${body.auditLogs.length} connections=${body.connections.length}`;
+  return `/api/ops ${response.status} source=${body.source} agents=${body.agents.length} tasks=${body.tasks.length} audit=${body.auditLogs.length} connections=${body.connections.length}`;
 }
 
 async function postLogin(payload) {

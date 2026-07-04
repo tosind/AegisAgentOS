@@ -139,10 +139,37 @@ Useful environment values:
 
 ```bash
 DEFAULT_LLM=ollama
+OLLAMA_MODEL=llama3.1:8b
+DEFAULT_AGENT_MODEL=llama3.1:8b
 VLLM_MODEL=meta-llama/Llama-3.1-70B-Instruct
 VLLM_GPU_COUNT=1
 HF_TOKEN=<token-for-gated-models>
 ```
+
+`OLLAMA_MODEL` is the model the security layer sends to Ollama. `DEFAULT_AGENT_MODEL` is written into new `agent_configs` rows when an agent is created from the dashboard.
+
+## Live Agent Harness
+
+The dashboard becomes a real harness when these services are online:
+
+- Agent runtime
+- Security layer
+- PostgreSQL/pgvector with `docker/init-db.sql` applied
+- Ollama or vLLM with a compatible model installed
+
+The live flow is:
+
+1. Open `http://localhost:3000/agents`.
+2. Create an agent. This writes an `agent_configs` row.
+3. Run a task. The dashboard posts to `/api/tasks`, which calls the runtime `/execute` endpoint.
+4. The runtime writes an `agent_tasks` row with status `running`.
+5. The runtime calls the security layer, which classifies the prompt, enforces policy, routes to Ollama/vLLM, and writes `audit_logs`.
+6. The runtime writes output, token count, duration, and tool calls back to `agent_tasks`.
+7. Successful runs store task memory in `agent_memory`.
+
+If a model is not installed, the task fails and the failure is preserved in `agent_tasks`; the UI should show that error instead of pretending the agent ran.
+
+For an existing database created before the task ledger existed, apply the latest `docker/init-db.sql` or add the `agent_tasks` table from that file.
 
 ## Reverse Proxy
 
@@ -178,6 +205,7 @@ For managed databases, use provider snapshots plus periodic logical dumps.
 - Change `DB_PASSWORD`, `DASHBOARD_ADMIN_PASSWORD`, `JWT_SECRET`, all service API keys, and all Paperclip secrets.
 - Use `AEGIS_DATABASE_URL` and `PAPERCLIP_DATABASE_URL` values with TLS.
 - Run `docker/init-db.sql` once against the Aegis database.
+- Pull the model named by `OLLAMA_MODEL`, or point vLLM at the model named by `VLLM_MODEL`.
 - Enable backups and test restore into a staging database.
 - Restrict service ports to the private network.
 - Replace placeholder credential storage with KMS, Vault, or your provider secret store.

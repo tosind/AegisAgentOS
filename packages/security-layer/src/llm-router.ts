@@ -92,7 +92,7 @@ class OllamaClient implements LLMClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: request.model || "llama3.1:70b",
+        model: request.model || process.env.OLLAMA_MODEL || "llama3.1:8b",
         messages: request.messages,
         options: {
           num_predict: request.maxTokens || 32768,
@@ -341,7 +341,11 @@ export class LLMRouter {
    * Pick the best available local backend.
    */
   pickBestLocal(): LLMBackend {
-    // vLLM preferred for production workloads
+    const preferred = (process.env.DEFAULT_LLM || "").toLowerCase();
+    if (preferred === LLMBackendConst.OLLAMA) {
+      return LLMBackendConst.OLLAMA;
+    }
+    // vLLM preferred for production GPU workloads.
     return LLMBackendConst.VLLM;
   }
 

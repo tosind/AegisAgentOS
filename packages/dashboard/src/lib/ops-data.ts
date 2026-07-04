@@ -14,6 +14,23 @@ export type AgentSummary = {
   lastActive: string;
 };
 
+export type AgentTaskSummary = {
+  id: string;
+  externalTaskId: string;
+  agentId: string;
+  agentName: string;
+  prompt: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  output: string | null;
+  errorMessage: string | null;
+  iterations: number;
+  tokensUsed: number;
+  toolCalls: unknown[];
+  durationMs: number | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
 export type AuditEvent = {
   id: string;
   time: string;
@@ -43,6 +60,7 @@ export type ServiceHealth = {
 export type OpsData = {
   source: "live" | "demo";
   agents: AgentSummary[];
+  tasks: AgentTaskSummary[];
   auditLogs: AuditEvent[];
   connections: IntegrationConnection[];
   serviceHealth: ServiceHealth;
@@ -74,9 +92,12 @@ export const demoConnections: IntegrationConnection[] = [
   { name: "SMTP Server", type: "Email (SMTP)", status: "disconnected", tools: 1, lastConnected: "Never" },
 ];
 
+export const demoTasks: AgentTaskSummary[] = [];
+
 export const demoOpsData: OpsData = {
   source: "demo",
   agents: demoAgents,
+  tasks: demoTasks,
   auditLogs: demoAuditLogs,
   connections: demoConnections,
   serviceHealth: {

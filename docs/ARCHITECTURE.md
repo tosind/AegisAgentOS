@@ -179,6 +179,26 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMP
 );
 
+-- Agent task ledger
+CREATE TABLE agent_tasks (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL,
+  agent_id UUID NOT NULL,
+  agent_name TEXT NOT NULL,
+  external_task_id TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  status TEXT NOT NULL,       -- 'queued', 'running', 'succeeded', 'failed'
+  output TEXT,
+  error_message TEXT,
+  iterations INTEGER,
+  tokens_used INTEGER,
+  tool_calls JSONB,
+  duration_ms INTEGER,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP
+);
+
 -- PII detection patterns
 CREATE TABLE pii_patterns (
   id UUID PRIMARY KEY,

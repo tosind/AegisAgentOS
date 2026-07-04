@@ -99,8 +99,12 @@ export function createServer() {
       }
 
       // Route to LLM
+      const preferredModel = agentConfig.llmPreferences.defaultModel;
+      const model =
+        preferredModel && preferredModel !== "local" ? preferredModel : undefined;
+
       const { response } = await llmRouter.route(
-        { messages, maxTokens, temperature, tools },
+        { messages, model, maxTokens, temperature, tools },
         agentConfig,
         tenantPolicy,
       );

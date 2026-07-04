@@ -7,10 +7,10 @@ Status: alpha. The workspace now builds and tests cleanly, the dashboard can run
 ## What Is Included
 
 - Next.js admin dashboard for agents, audit logs, policies, integrations, onboarding, and settings
-- Agent runtime service with memory, skills, tool execution, and Paperclip webhook intake
+- Agent runtime service with DB-backed agent registry, task ledger, memory, skills, tool execution, and Paperclip webhook intake
 - Security layer with PII detection, policy evaluation, audit logging, and local-first LLM routing
 - MCP hub with connector scaffolds for PostgreSQL, Slack, GitHub, REST APIs, SMTP email, and filesystem tools
-- Postgres + pgvector schema for policies, agents, audit logs, memory, skills, MCP connections, and approvals
+- Postgres + pgvector schema for policies, agents, task runs, audit logs, memory, skills, MCP connections, and approvals
 - Docker Compose stack for dashboard, Paperclip, Postgres, Ollama, vLLM, runtime, security layer, MCP hub, and nginx
 
 ## Quick Start
@@ -71,7 +71,15 @@ docker compose -f docker/docker-compose.yml --profile gpu up -d --build
 
 ## Dashboard Data Mode
 
-The dashboard calls `/api/ops`. If the local services are online, it reports live service health, audit rows, integrations, and backend availability. If services are offline, it falls back to packaged demo data so a fresh checkout still presents the product clearly.
+The dashboard calls `/api/ops`. If the local services are online, it reports live service health, agent records, task runs, audit rows, integrations, and backend availability. If services are offline, it falls back to packaged demo data so a fresh checkout still presents the product clearly.
+
+The Agents page is a live harness when the runtime is online:
+
+- `Create Agent` writes to `agent_configs`
+- `Run Task` calls the runtime `/execute` endpoint through `/api/tasks`
+- task output is persisted in `agent_tasks`
+- successful runs write memory to `agent_memory`
+- LLM calls write audit rows through the security layer
 
 ## Deployment Docs
 

@@ -18,6 +18,8 @@ Agent configuration lives in `agent_configs`:
 
 Agent memory lives in `agent_memory` and requires pgvector. Keep embeddings tenant-scoped and agent-scoped.
 
+Task runs live in `agent_tasks`. Every dashboard-triggered run creates a row, updates it to `succeeded` or `failed`, and stores output, token count, duration, iterations, and tool calls.
+
 ## Register an Agent
 
 1. Create the agent in Paperclip.
@@ -39,7 +41,7 @@ INSERT INTO agent_configs (
   '<paperclip-agent-uuid>',
   'Revenue Analyst',
   'analytics',
-  '{"defaultModel":"ollama","fallbackModel":"vllm","maxTokens":8192,"temperature":0.2}',
+  '{"defaultModel":"llama3.1:8b","fallbackModel":"ollama","maxTokens":8192,"temperature":0.2}',
   '{"allowedTools":["postgres.query","github.search","slack.send"],"deniedTools":["filesystem.write","shell.exec"]}',
   false,
   300
@@ -76,7 +78,7 @@ For production, do not store plaintext credentials in `connection_config`. Repla
 
 ## Execute a Task
 
-When the runtime is online, internal services can submit work to `POST /execute`.
+When the runtime is online, internal services can submit work to `POST /execute`. The dashboard uses the same execution path through its `/api/tasks` proxy.
 
 ```bash
 curl -X POST http://localhost:8421/execute \
@@ -90,7 +92,21 @@ curl -X POST http://localhost:8421/execute \
   }'
 ```
 
-The runtime routes the task through the security layer, checks policy, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, and stores memory when enabled.
+The runtime routes the task through the security layer, checks policy, calls the selected LLM backend, uses permitted MCP tools, writes audit rows, writes the task result to `agent_tasks`, and stores memory when enabled.
+
+To use Ollama, make sure the model exists:
+
+```bash
+docker compose -f docker/docker-compose.yml exec ollama ollama pull llama3.1:8b
+```
+
+Then set:
+
+```bash
+DEFAULT_LLM=ollama
+OLLAMA_MODEL=llama3.1:8b
+DEFAULT_AGENT_MODEL=llama3.1:8b
+```
 
 ## Policy Defaults
 

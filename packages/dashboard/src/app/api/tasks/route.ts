@@ -1,0 +1,35 @@
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
+import { DEFAULT_TENANT_ID, proxyJson, serviceUrls } from "@/lib/service-client";
+
+export async function GET() {
+  const { response, body } = await proxyJson(
+    `${serviceUrls.agentRuntime}/tasks?tenantId=${DEFAULT_TENANT_ID}&limit=25`,
+    { method: "GET" },
+    5000,
+  );
+
+  return NextResponse.json(body || { tasks: [] }, { status: response.status });
+}
+
+export async function POST(request: Request) {
+  const payload = await request.json();
+  const { response, body } = await proxyJson(
+    `${serviceUrls.agentRuntime}/execute`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        taskId: payload.taskId || randomUUID(),
+        tenantId: DEFAULT_TENANT_ID,
+        agentId: payload.agentId,
+        agentName: payload.agentName,
+        prompt: payload.prompt,
+        context: payload.context || {},
+        maxIterations: payload.maxIterations || 4,
+      }),
+    },
+    120000,
+  );
+
+  return NextResponse.json(body || {}, { status: response.status });
+}
