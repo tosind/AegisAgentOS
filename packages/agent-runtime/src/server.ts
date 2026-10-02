@@ -21,6 +21,7 @@ export function createServer() {
 
   // Global middleware
   app.use(requestLogger);
+  app.use(authMiddleware);
   app.use(tenantContext);
 
   const engine = new AgentEngine();

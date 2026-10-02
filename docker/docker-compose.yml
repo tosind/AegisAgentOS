@@ -153,6 +153,9 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       MCP_HUB_URL: http://mcp-hub:8422
       MCP_HUB_API_KEY: ${MCP_HUB_API_KEY:-esk_dev_mcp_hub_key}
+      AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY:-esk_dev_dashboard_key}
+      PAPERCLIP_WEBHOOK_SECRET: ${PAPERCLIP_WEBHOOK_SECRET:-}
       DEFAULT_AGENT_MODEL: ${DEFAULT_AGENT_MODEL:-llama3.1:8b}
       DEFAULT_LLM: ${DEFAULT_LLM:-ollama}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -179,9 +182,12 @@ services:
     container_name: enterprise-mcp-hub
     environment:
       PORT: "8422"
+      CONNECTOR_ENCRYPTION_KEY: ${CONNECTOR_ENCRYPTION_KEY:-}
       DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
       AGENT_RUNTIME_URL: http://agent-runtime:8421
       AGENT_RUNTIME_API_KEY: ${AGENT_RUNTIME_API_KEY:-esk_dev_agent_runtime_key}
+      MCP_HUB_API_KEY: ${MCP_HUB_API_KEY:-esk_dev_mcp_hub_key}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY:-esk_dev_dashboard_key}
     ports:
       - "8422:8422"
     depends_on:
@@ -208,6 +214,8 @@ services:
       SECURITY_LAYER_URL: http://security-layer:8423
       MCP_HUB_URL: http://mcp-hub:8422
       DASHBOARD_ADMIN_EMAIL: ${DASHBOARD_ADMIN_EMAIL:-admin@enterprise.local}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY:-esk_dev_dashboard_key}
+      JWT_SECRET: ${JWT_SECRET:-enterprise-dev-secret-change-in-production}
       DASHBOARD_ADMIN_PASSWORD: ${DASHBOARD_ADMIN_PASSWORD:-change-me-now}
       DATABASE_URL: ${AEGIS_DATABASE_URL:-postgresql://enterprise:${DB_PASSWORD:-enterprise_secret}@postgres:5432/enterprise_agents}
     ports:

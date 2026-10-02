@@ -34,9 +34,15 @@ export function clearSession(): void {
 // These are kept for backwards compatibility with the login API route.
 // In production, replace with the shared @enterprise/shared package.
 
-import { createHmac, pbkdf2Sync } from "crypto";
+import { createHmac, pbkdf2Sync, timingSafeEqual } from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET || "enterprise-dev-secret-change-in-production";
+function sessionSecret(): string {
+if (process.env.NODE_ENV === "production" && (!process.env.JWT_SECRET || JWT_SECRET.length < 32 || JWT_SECRET === "enterprise-dev-secret-change-in-production")) {
+  throw new Error("Production requires a unique JWT_SECRET of at least 32 characters");
+}
+return JWT_SECRET;
+}
 
 export function createSessionToken(user: Omit<UserSession, "exp">): string {
   const exp = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
@@ -46,7 +52,7 @@ export function createSessionToken(user: Omit<UserSession, "exp">): string {
     JSON.stringify({ alg: "HS256", typ: "JWT" }),
   ).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = createHmac("sha256", JWT_SECRET)
+  const signature = createHmac("sha256", sessionSecret())
     .update(`${header}.${body}`)
     .digest("base64url");
 
@@ -58,13 +64,20 @@ export function verifySessionToken(token: string): UserSession | null {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     const [header, body, signature] = parts;
-    const expected = createHmac("sha256", JWT_SECRET)
+    const expected = createHmac("sha256", sessionSecret())
       .update(`${header}.${body}`)
       .digest("base64url");
-    if (signature !== expected) return null;
+    const actualBytes = Buffer.from(signature, "base64url");
+    const expectedBytes = Buffer.from(expected, "base64url");
+    if (actualBytes.length !== expectedBytes.length || !timingSafeEqual(actualBytes, expectedBytes)) return null;
+    const metadata = JSON.parse(Buffer.from(header, "base64url").toString());
+    if (metadata.alg !== "HS256" || metadata.typ !== "JWT") return null;
 
     const session = JSON.parse(Buffer.from(body, "base64url").toString()) as UserSession;
-    if (session.exp < Math.floor(Date.now() / 1000)) return null;
+    if (!Number.isFinite(session.exp) || session.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (typeof session.userId !== "string" || typeof session.tenantId !== "string" ||
+        typeof session.email !== "string" || typeof session.name !== "string" ||
+        !Array.isArray(session.roles) || !session.roles.every(role => typeof role === "string")) return null;
     return session;
   } catch {
     return null;

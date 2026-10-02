@@ -35,3 +35,4 @@ jobs:
         run: npm run build
         env:
           DASHBOARD_ADMIN_PASSWORD: ci-dashboard-password
+          JWT_SECRET: ci-only-session-secret-never-use-in-production

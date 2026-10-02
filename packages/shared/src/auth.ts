@@ -60,6 +60,13 @@ export function generateServiceKey(): string {
 // ── JWT Auth (Dashboard Users) ─────────────────────────────────
 
 const JWT_SECRET = process.env.JWT_SECRET || "enterprise-dev-secret-change-in-production";
+function sessionSecret(): string {
+if (process.env.NODE_ENV === "production" &&
+    (!process.env.JWT_SECRET || JWT_SECRET.length < 32 || JWT_SECRET === "enterprise-dev-secret-change-in-production")) {
+  throw new Error("Production requires a unique JWT_SECRET of at least 32 characters");
+}
+return JWT_SECRET;
+}
 
 export interface UserSession {
   userId: string;
@@ -82,7 +89,7 @@ export function createSessionToken(user: Omit<UserSession, "exp">): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", JWT_SECRET)
+    .createHmac("sha256", sessionSecret())
     .update(`${header}.${body}`)
     .digest("base64url");
 
@@ -99,16 +106,23 @@ export function verifySessionToken(token: string): UserSession | null {
 
     const [header, body, signature] = parts;
     const expectedSig = crypto
-      .createHmac("sha256", JWT_SECRET)
+      .createHmac("sha256", sessionSecret())
       .update(`${header}.${body}`)
       .digest("base64url");
 
-    if (signature !== expectedSig) return null;
+    const actual = Buffer.from(signature, "base64url");
+    const expected = Buffer.from(expectedSig, "base64url");
+    if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
+    const metadata = JSON.parse(Buffer.from(header, "base64url").toString());
+    if (metadata.alg !== "HS256" || metadata.typ !== "JWT") return null;
 
     const payload = JSON.parse(Buffer.from(body, "base64url").toString()) as UserSession;
 
     // Check expiration
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (!Number.isFinite(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (typeof payload.userId !== "string" || typeof payload.tenantId !== "string" ||
+        typeof payload.email !== "string" || typeof payload.name !== "string" ||
+        !Array.isArray(payload.roles) || !payload.roles.every(role => typeof role === "string")) return null;
 
     return payload;
   } catch {
@@ -272,6 +286,9 @@ const defaultKeys = [
 for (const { name, roles } of defaultKeys) {
   const envKey = process.env[`${name.toUpperCase().replace(/-/g, "_")}_API_KEY`];
   if (envKey) {
+    if (process.env.NODE_ENV === "production" && (envKey.length < 32 || envKey.startsWith("esk_dev_"))) {
+      throw new Error(`Production requires a unique ${name} API key of at least 32 characters`);
+    }
     registerServiceKey(envKey, name, roles);
   }
 }

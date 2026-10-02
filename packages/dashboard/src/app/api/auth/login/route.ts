@@ -39,6 +39,9 @@ export async function POST(request: Request) {
     const configuredAdminEmail =
       process.env.DASHBOARD_ADMIN_EMAIL || "admin@enterprise.local";
     const configuredAdminPassword = process.env.DASHBOARD_ADMIN_PASSWORD;
+    if (process.env.NODE_ENV === "production" && (!configuredAdminPassword || configuredAdminPassword.length < 16 || configuredAdminPassword === "change-me-now")) {
+      return NextResponse.json({ error: "Administrator credentials are not securely configured" }, { status: 503 });
+    }
     const user = MOCK_USERS[normalizedEmail] || (
       normalizedEmail === configuredAdminEmail
         ? {
