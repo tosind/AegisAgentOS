@@ -16,6 +16,7 @@ function approvalTarget(actionType: string, value: string): string {
 export function createServer() {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
+  app.use((req, res, next) => req.path === "/health" ? next() : requireServiceAuth(req, res, next));
 
   const policyEngine = new PolicyEngine();
   const llmRouter = new LLMRouter(policyEngine);

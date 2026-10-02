@@ -3,10 +3,12 @@
 
 import express, { type Request, type Response } from "express";
 import { ConnectionManager } from "./connections.js";
+import { requireServiceAuth } from "@enterprise/shared/auth";
 
 export function createServer() {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
+  app.use((req, res, next) => req.path === "/health" ? next() : requireServiceAuth(req, res, next));
 
   const manager = new ConnectionManager();
 

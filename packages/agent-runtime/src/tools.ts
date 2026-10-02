@@ -40,6 +40,7 @@ export class ToolRegistry {
 
     try {
       const response = await fetch(`${MCP_HUB_URL}/tools?tenantId=${tenantId}`, {
+        headers: { Authorization: `Bearer ${process.env.MCP_HUB_API_KEY || ""}` },
         signal: AbortSignal.timeout(5000),
       });
 
@@ -81,7 +82,8 @@ export class ToolRegistry {
       `${MCP_HUB_URL}/tools/${encodeURIComponent(toolName)}/call`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.MCP_HUB_API_KEY || ""}` },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({ tenantId, arguments: args }),
       },
     );

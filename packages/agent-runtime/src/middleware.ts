@@ -25,6 +25,10 @@ export function authMiddleware(
     // Paperclip sends its own auth via API key env var
     // We verify the webhook signature or shared secret
     const webhookSecret = process.env.PAPERCLIP_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      res.status(503).json({ error: "Webhook authentication is not configured" });
+      return;
+    }
     if (webhookSecret) {
       const provided = req.headers["x-webhook-secret"];
       if (provided !== webhookSecret) {

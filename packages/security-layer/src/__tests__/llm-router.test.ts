@@ -5,6 +5,7 @@ import { LLMRouter } from "../llm-router.js";
 import { PolicyEngine } from "../policy-engine.js";
 import { SensitivityLevel, LLMBackend } from "@enterprise/shared";
 import type { ClassificationResult, AgentConfig, SecurityPolicy } from "@enterprise/shared";
+vi.mock("../db.js", () => ({ pool: { query: vi.fn().mockResolvedValue({ rows: [] }) } }));
 
 // Mock fetch for LLM clients
 const mockFetch = vi.fn();
